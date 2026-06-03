@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JobFitCheck</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <!-- Loading Overlay -->
+  <div id="loading" class="loading-overlay hidden">
+    <div class="spinner"></div>
+    <span>Analyzing...</span>
+  </div>
+
+  <!-- Header -->
+  <header>
+    <h1>JobFitCheck</h1>
+    <span id="version" class="version"></span>
+  </header>
+
+  <!-- Error Banner -->
+  <div id="error-banner" class="error-banner hidden"></div>
+
+  <!-- Section 1: My Profile -->
+  <section class="section" id="profile-section">
+    <h2>My Profile</h2>
+    
+    <!-- Upload State -->
+    <div id="upload-state">
+      <input type="file" id="pdf-upload" accept=".pdf" hidden>
+      <button id="upload-btn" class="btn btn-primary">
+        <span>📄 Upload Resume PDF</span>
+      </button>
+      <p class="hint">Max 5MB • PDF only</p>
+    </div>
+    
+    <!-- Profile Saved State -->
+    <div id="profile-state" class="hidden">
+      <div class="profile-card">
+        <div class="profile-info">
+          <span class="profile-name" id="profile-name">--</span>
+          <span class="profile-skills" id="profile-skills">-- skills</span>
+        </div>
+        <button id="clear-profile" class="btn btn-link">Clear profile</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 2: Analyze This Job -->
+  <section class="section" id="analyze-section">
+    <h2>Analyze This Job</h2>
+    <button id="analyze-btn" class="btn btn-primary" disabled>
+      <span>🔍 Analyze Current Page</span>
+    </button>
+    <p id="analyze-hint" class="hint">Upload your resume first</p>
+  </section>
+
+  <!-- Section 3: Results (Hidden initially) -->
+  <section class="section hidden" id="results-section">
+    <h2>Match Results</h2>
+    
+    <div class="score-container">
+      <div id="match-score" class="score">--</div>
+      <span class="score-label">Match Score</span>
+    </div>
+
+    <div class="skills-section">
+      <h3>Matched Skills</h3>
+      <div id="matched-skills" class="chips chips-green">
+        <!-- Green chips populated by JS -->
+      </div>
+    </div>
+
+    <div class="skills-section">
+      <h3>Missing Skills</h3>
+      <div id="missing-skills" class="chips chips-red">
+        <!-- Red chips populated by JS -->
+      </div>
+    </div>
+
+    <div class="recommendations">
+      <h3>Top Recommendations</h3>
+      <ol id="recommendations-list">
+        <!-- Numbered list populated by JS -->
+      </ol>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>Backend: <span id="backend-status">Checking...</span></p>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>

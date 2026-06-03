@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mock Lever Application</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+    .application-question { margin-bottom: 24px; }
+    .application-label { font-weight: 600; margin-bottom: 8px; color: #333; }
+    .application-field input, .application-field textarea, .application-field select {
+      width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;
+    }
+    .application-additional { margin-top: 20px; padding: 16px; background: #f9fafb; border-radius: 8px; }
+    .btn { background: #ff6b6b; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Apply to Lever Company</h1>
+  
+  <form id="lever-application">
+    <div class="application-question">
+      <div class="application-label">Name <span>*</span></div>
+      <div class="application-field">
+        <input type="text" name="name" placeholder="Your full name">
+      </div>
+    </div>
+
+    <div class="application-question">
+      <div class="application-label">Email <span>*</span></div>
+      <div class="application-field">
+        <input type="email" name="email" placeholder="you@example.com">
+      </div>
+    </div>
+
+    <div class="application-question">
+      <div class="application-label">Phone</div>
+      <div class="application-field">
+        <input type="tel" name="phone" placeholder="+1 555-000-0000">
+      </div>
+    </div>
+
+    <div class="application-additional">
+      <h3>Additional Questions</h3>
+      
+      <div class="application-question">
+        <div class="application-label">How did you hear about us? <span>*</span></div>
+        <div class="application-field">
+          <select name="source">
+            <option>Select...</option>
+            <option>LinkedIn</option>
+            <option>Referral</option>
+            <option>Company Website</option>
+            <option>Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="application-question">
+        <div class="application-label">Are you authorized to work in the US? <span>*</span></div>
+        <div class="application-field">
+          <label><input type="radio" name="workAuth" value="yes"> Yes</label><br>
+          <label><input type="radio" name="workAuth" value="no"> No</label>
+        </div>
+      </div>
+
+      <div class="application-question">
+        <div class="application-label">Cover Letter</div>
+        <div class="application-field">
+          <textarea name="coverLetter" rows="4" placeholder="Optional..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="btn" id="btn-submit">Submit Application</button>
+  </form>
+
+  <div id="test-results" style="margin-top: 30px; padding: 20px; background: #fef3f2; border-radius: 8px;">
+    <h3>Lever Portal Tests</h3>
+    <div id="results">Running...</div>
+  </div>
+
+  <script>
+    window.LeverTest = {
+      results: [],
+      
+      log(msg, status = 'info') {
+        this.results.push({ msg, status });
+        document.getElementById('results').innerHTML = this.results.map(r => 
+          `<div style="color: ${r.status==='success'?'green':r.status==='error'?'red':'black'};margin:4px 0;">
+            ${r.status==='success'?'✓':r.status==='error'?'✗':'•'} ${r.msg}
+          </div>`
+        ).join('');
+      },
+      
+      run() {
+        // Test scraping
+        const questions = document.querySelectorAll('.application-question');
+        this.log(`Found ${questions.length} Lever questions`, questions.length > 0 ? 'success' : 'error');
+        
+        // Test specific field types
+        const inputs = document.querySelectorAll('.application-field input[type="text"]');
+        this.log(`Text inputs: ${inputs.length}`, inputs.length > 0 ? 'success' : 'error');
+        
+        const selects = document.querySelectorAll('.application-field select');
+        this.log(`Selects: ${selects.length}`, selects.length > 0 ? 'success' : 'info');
+        
+        const radios = document.querySelectorAll('.application-field input[type="radio"]');
+        this.log(`Radio buttons: ${radios.length}`, radios.length > 0 ? 'success' : 'info');
+        
+        // Check for save indicators after delay
+        setTimeout(() => {
+          const indicators = document.querySelectorAll('.jobfitly-saved-indicator');
+          this.log(`Save indicators: ${indicators.length}`, indicators.length > 0 ? 'success' : 'error');
+        }, 2000);
+      }
+    };
+    
+    window.addEventListener('load', () => setTimeout(() => window.LeverTest.run(), 500));
+  </script>
+</body>
+</html>

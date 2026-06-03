@@ -1,0 +1,8 @@
+{
+  "watch": ["src"],
+  "ext": "js,json",
+  "ignore": ["src/**/*.test.js"],
+  "delay": 1000,
+  "exitcrash": false,
+  "signal": "SIGTERM"
+}

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mock Workday Application - Capital One</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+    .form-field { margin-bottom: 20px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+    label { display: block; font-weight: bold; margin-bottom: 5px; }
+    input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 3px; }
+    .saved-indicator { color: #10b981; font-size: 12px; margin-left: 8px; font-weight: 500; }
+    button { background: #4ade80; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #22c55e; }
+  </style>
+</head>
+<body>
+  <h1>Job Application - Capital One</h1>
+  <form id="application-form">
+    
+    <!-- Basic Info Section -->
+    <div data-automation-id="formField-fullName">
+      <label>Full Name <span class="required">*</span></label>
+      <input type="text" id="fullName" placeholder="Enter your full name">
+    </div>
+
+    <div data-automation-id="formField-email">
+      <label>Email <span class="required">*</span></label>
+      <input type="email" id="email" placeholder="Enter your email">
+    </div>
+
+    <div data-automation-id="formField-phone">
+      <label>Phone Number</label>
+      <input type="text" id="phone" placeholder="+1 (555) 000-0000">
+    </div>
+
+    <div data-automation-id="formField-linkedin">
+      <label>LinkedIn URL</label>
+      <input type="text" id="linkedin" placeholder="https://linkedin.com/in/...">
+    </div>
+
+    <!-- Complex Fields - Should be skipped during injection -->
+    <div data-automation-id="formField-country">
+      <label>Country <span class="required">*</span></label>
+      <button type="button" aria-haspopup="listbox">Select Country</button>
+    </div>
+
+    <div data-automation-id="formField-address">
+      <label>Address</label>
+      <input type="text" id="address" placeholder="Street address">
+    </div>
+
+    <div data-automation-id="formField-state">
+      <label>State/Province</label>
+      <button type="button" aria-haspopup="listbox">Select State</button>
+    </div>
+
+    <!-- Questions -->
+    <div data-automation-id="formField-workAuthorization">
+      <label>Do you have work authorization? <span class="required">*</span></label>
+      <input type="checkbox" id="workAuth"> Yes
+    </div>
+
+    <div data-automation-id="formField-sponsorship">
+      <label>Do you require sponsorship? <span class="required">*</span></label>
+      <input type="checkbox" id="sponsorship"> Yes
+    </div>
+
+    <div data-automation-id="formField-salary">
+      <label>Salary Expectations</label>
+      <input type="text" id="salary" placeholder="e.g., 150000">
+    </div>
+
+    <button type="submit" id="submit-btn">Submit Application</button>
+  </form>
+
+  <div id="test-results" style="margin-top: 30px; padding: 20px; background: #f3f4f6; border-radius: 8px;">
+    <h3>Test Results</h3>
+    <div id="results-content">Waiting for tests...</div>
+  </div>
+
+  <script>
+    // Test harness
+    window.PortalTest = {
+      results: [],
+      
+      log(message, status = 'info') {
+        this.results.push({ message, status, time: Date.now() });
+        this.updateDisplay();
+        console.log(`[PortalTest] ${message}`);
+      },
+      
+      updateDisplay() {
+        const container = document.getElementById('results-content');
+        container.innerHTML = this.results.map(r => 
+          `<div style="color: ${r.status === 'error' ? 'red' : r.status === 'success' ? 'green' : 'black'}; margin: 4px 0;">
+            ${r.status === 'success' ? '✓' : r.status === 'error' ? '✗' : '•'} ${r.message}
+          </div>`
+        ).join('');
+      },
+      
+      async runTests() {
+        this.log('Starting e2e tests...', 'info');
+        
+        // Test 1: Check field detection
+        const fields = document.querySelectorAll('[data-automation-id^="formField-"]');
+        this.log(`Found ${fields.length} form fields`, fields.length > 0 ? 'success' : 'error');
+        
+        // Test 2: Simulate autofill
+        setTimeout(() => {
+          document.getElementById('fullName').value = 'John Doe';
+          document.getElementById('fullName').dispatchEvent(new Event('input', { bubbles: true }));
+          document.getElementById('fullName').dispatchEvent(new Event('blur'));
+          this.log('Simulated name input', 'info');
+        }, 1000);
+        
+        // Test 3: Check for save indicator after 2 seconds
+        setTimeout(() => {
+          const indicators = document.querySelectorAll('.jobfitly-saved-indicator');
+          if (indicators.length > 0) {
+            this.log(`Save indicator found! (${indicators.length} total)`, 'success');
+          } else {
+            this.log('Save indicator NOT found - blur capture not working', 'error');
+          }
+        }, 3000);
+        
+        // Test 4: Form submission
+        document.getElementById('submit-btn').addEventListener('click', (e) => {
+          e.preventDefault();
+          this.log('Form submission captured', 'success');
+        });
+      }
+    };
+    
+    // Auto-start tests after page load
+    window.addEventListener('load', () => {
+      setTimeout(() => window.PortalTest.runTests(), 500);
+    });
+  </script>
+</body>
+</html>

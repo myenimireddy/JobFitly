@@ -1,0 +1,64 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Profile {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Resume data
+  rawText     String   // Extracted PDF text
+  parsedData  String   // JSON string: skills, experience, education
+
+  // Relations
+  matches     Match[]  // All gap analyses for this profile
+
+  @@map("profiles")
+}
+
+model Job {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Job data
+  url         String   // Original job posting URL
+  rawHtml     String   // Raw HTML scraped from page
+  parsedData  String   // JSON string: title, company, requirements
+
+  // Relations
+  matches     Match[]  // All gap analyses for this job
+
+  @@map("jobs")
+}
+
+model Match {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Foreign keys
+  profileId   String
+  jobId       String
+
+  // Analysis results
+  resultData  String   // JSON string: gap analysis, missing skills, suggestions
+  matchScore  Int      // 0-100 overall fit score
+
+  // Relations
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  // Prevent duplicate matches
+  @@unique([profileId, jobId])
+  @@map("matches")
+}

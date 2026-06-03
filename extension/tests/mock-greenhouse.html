@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mock Greenhouse Application</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 700px; margin: 50px auto; padding: 20px; }
+    .application--container { background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .field-wrapper { margin-bottom: 20px; }
+    .label { display: block; font-weight: 600; margin-bottom: 6px; color: #374151; }
+    .input { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+    .btn { background: #4ade80; color: white; padding: 12px 32px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; }
+    .btn:hover { background: #22c55e; }
+    .phone-input { display: flex; gap: 12px; }
+    .eeoc__container { margin-top: 32px; padding: 20px; background: #f9fafb; border-radius: 8px; }
+    .eeoc__question__wrapper { margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <div class="application--container">
+    <h2>Apply for this job</h2>
+    <p class="body body__secondary"><span>*</span> indicates a required field</p>
+    
+    <form id="application-form" class="application--form">
+      <!-- Basic Info -->
+      <div class="field-wrapper">
+        <div class="input-wrapper">
+          <label class="label" for="first_name">First Name <span>*</span></label>
+          <input type="text" id="first_name" class="input input__single-line" placeholder="First name">
+        </div>
+      </div>
+
+      <div class="field-wrapper">
+        <div class="input-wrapper">
+          <label class="label" for="last_name">Last Name <span>*</span></label>
+          <input type="text" id="last_name" class="input input__single-line" placeholder="Last name">
+        </div>
+      </div>
+
+      <div class="field-wrapper">
+        <div class="input-wrapper">
+          <label class="label" for="email">Email <span>*</span></label>
+          <input type="email" id="email" class="input input__single-line" placeholder="you@example.com">
+        </div>
+      </div>
+
+      <div class="field-wrapper">
+        <fieldset class="phone-input">
+          <label class="label">Phone</label>
+          <div class="phone-input__country">
+            <select class="input">
+              <option value="+1">🇺🇸 +1</option>
+              <option value="+44">🇬🇧 +44</option>
+              <option value="+91">🇮🇳 +91</option>
+            </select>
+          </div>
+          <div class="phone-input__phone">
+            <input type="tel" id="phone" class="input" placeholder="555-000-0000">
+          </div>
+        </fieldset>
+      </div>
+
+      <!-- Additional Questions -->
+      <div class="application--questions">
+        <div class="field-wrapper">
+          <div class="select__container">
+            <label class="label select__label" for="question_1">Are you able to work onsite? <span>*</span></label>
+            <select class="input" id="question_1">
+              <option>Select...</option>
+              <option>Yes</option>
+              <option>No</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-wrapper">
+          <div class="input-wrapper">
+            <label class="label" for="question_2">What is your most proficient programming language? <span>*</span></label>
+            <input type="text" id="question_2" class="input" placeholder="e.g., JavaScript, Python">
+          </div>
+        </div>
+      </div>
+
+      <!-- EEOC Section -->
+      <div class="eeoc__container">
+        <h3>Voluntary Self-Identification</h3>
+        
+        <div class="eeoc__question__wrapper">
+          <div class="select__container">
+            <label class="label select__label" for="gender">Gender <span>*</span></label>
+            <select class="input" id="gender">
+              <option>Select...</option>
+              <option>Male</option>
+              <option>Female</option>
+              <option>Non-binary</option>
+              <option>Decline to self-identify</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="eeoc__question__wrapper">
+          <div class="select__container">
+            <label class="label select__label" for="race">Race <span>*</span></label>
+            <select class="input" id="race">
+              <option>Select...</option>
+              <option>Asian</option>
+              <option>Black or African American</option>
+              <option>Hispanic or Latino</option>
+              <option>White</option>
+              <option>Two or More Races</option>
+              <option>Decline to self-identify</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="eeoc__question__wrapper">
+          <div class="select__container">
+            <label class="label select__label" for="veteran">Veteran Status <span>*</span></label>
+            <select class="input" id="veteran">
+              <option>Select...</option>
+              <option>I am not a veteran</option>
+              <option>I am a veteran</option>
+              <option>Decline to self-identify</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="application--submit" style="margin-top: 24px;">
+        <button type="submit" class="btn">Submit application</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="test-results" style="margin-top: 30px; padding: 20px; background: #f0fdf4; border-radius: 8px;">
+    <h3>Greenhouse Portal Tests</h3>
+    <div id="results">Running...</div>
+  </div>
+
+  <script>
+    window.GreenhouseTest = {
+      results: [],
+      
+      log(msg, status = 'info') {
+        this.results.push({ msg, status });
+        document.getElementById('results').innerHTML = this.results.map(r => 
+          `<div style="color: ${r.status==='success'?'green':r.status==='error'?'red':'black'};margin:4px 0;">
+            ${r.status==='success'?'✓':r.status==='error'?'✗':'•'} ${r.msg}
+          </div>`
+        ).join('');
+      },
+      
+      run() {
+        // Test field detection
+        const fields = document.querySelectorAll('.field-wrapper, .eeoc__question__wrapper');
+        this.log(`Found ${fields.length} Greenhouse fields`, fields.length > 0 ? 'success' : 'error');
+        
+        // Test specific selectors
+        const textInputs = document.querySelectorAll('input[type="text"], input[type="email"]');
+        this.log(`Text inputs: ${textInputs.length}`, textInputs.length >= 3 ? 'success' : 'error');
+        
+        const selects = document.querySelectorAll('select');
+        this.log(`Select dropdowns: ${selects.length}`, selects.length > 0 ? 'success' : 'info');
+        
+        const labels = document.querySelectorAll('.label, .select__label');
+        this.log(`Labels found: ${labels.length}`, labels.length > 0 ? 'success' : 'error');
+        
+        // Simulate input and check for save indicator
+        setTimeout(() => {
+          const firstInput = document.querySelector('input[type="text"]');
+          if (firstInput) {
+            firstInput.value = 'Test Value';
+            firstInput.dispatchEvent(new Event('input', { bubbles: true }));
+            firstInput.dispatchEvent(new Event('blur'));
+            this.log('Simulated input blur', 'info');
+          }
+        }, 500);
+        
+        // Check for indicators
+        setTimeout(() => {
+          const indicators = document.querySelectorAll('.jobfitly-saved-indicator');
+          this.log(`Save indicators: ${indicators.length}`, indicators.length > 0 ? 'success' : 'error');
+        }, 2000);
+      }
+    };
+    
+    window.addEventListener('load', () => setTimeout(() => window.GreenhouseTest.run(), 500));
+  </script>
+</body>
+</html>

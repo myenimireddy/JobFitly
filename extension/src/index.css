@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design tokens from career-ai-platform */
+:root {
+  color-scheme: dark;
+  --bg-primary: #0f172a;
+  --bg-secondary: rgba(71, 85, 149, 0.9);
+  --bg-card: rgba(30, 41, 59, 0.8);
+  --text-primary: #ffffff;
+  --text-secondary: rgba(203, 213, 225, 0.8);
+  --text-muted: rgba(148, 163, 184, 0.6);
+  --border-color: rgba(255, 255, 255, 0.1);
+  --accent-color: #67e8f9;
+  --accent-secondary: #475569;
+}
+
+/* Custom animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+/* Custom scrollbar for popup */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Base styles */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Spinner border width utility */
+.border-3 {
+  border-width: 3px;
+}
