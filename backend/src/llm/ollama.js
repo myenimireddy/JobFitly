@@ -47,8 +47,9 @@ class OllamaLLM extends BaseLLM {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
+        format: 'json',
         options: {
-          temperature: 0.1,
+          temperature: 0,
         },
         signal: controller.signal,
       });
