@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "JobFitCheck",
+  "name": "JobFitly",
   "version": "1.0.0",
-  "description": "AI-powered job fit analyzer",
+  "description": "Fill job applications from your resume, then you confirm",
   "permissions": [
     "activeTab",
     "scripting",

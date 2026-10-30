@@ -16,18 +16,7 @@ export function SavedAnswers() {
 
   const fetchSavedAnswers = useCallback(async () => {
     try {
-      // Try localStorage first, then 'current' to get latest profile, then hardcoded fallback
-      let profileId = localStorage.getItem('jobfitcheck_profile_id');
-      if (!profileId) {
-        console.log('[SavedAnswers] No profileId in localStorage, trying current...');
-        profileId = 'current';
-      }
-      
-      // Hardcoded fallback for development
-      if (profileId === 'current') {
-        profileId = 'cmplb50cy00009d02ifya1l86';
-        console.log('[SavedAnswers] Using hardcoded profileId:', profileId);
-      }
+      const profileId = localStorage.getItem('jobfitcheck_profile_id') || 'current';
 
       const response = await fetch(`${API_BASE}/autofill/saved-answers/${profileId}`);
       if (!response.ok) throw new Error('Failed to fetch saved answers');
@@ -182,7 +171,7 @@ export function SavedAnswers() {
             onClick={async () => {
               if (confirm('Are you sure you want to clear all saved answers?')) {
                 try {
-                  const profileId = localStorage.getItem('jobfitcheck_profile_id') || 'cmplb50cy00009d02ifya1l86';
+                  const profileId = localStorage.getItem('jobfitcheck_profile_id') || 'current';
                   await fetch(`${API_BASE}/autofill/clear-answers/${profileId}`, { method: 'DELETE' });
                   setAnswers([]);
                 } catch (err) {
@@ -263,7 +252,7 @@ export function SavedAnswers() {
                       onClick={async () => {
                         if (confirm(`Delete "${answer.label}"?`)) {
                           try {
-                            const profileId = localStorage.getItem('jobfitcheck_profile_id') || 'cmplb50cy00009d02ifya1l86';
+                            const profileId = localStorage.getItem('jobfitcheck_profile_id') || 'current';
                             await fetch(`${API_BASE}/autofill/delete-answer/${profileId}`, {
                               method: 'DELETE',
                               headers: { 'Content-Type': 'application/json' },
