@@ -45,6 +45,37 @@ router.post('/generate', async (req, res, next) => {
   }
 });
 
+const draftSchema = z.object({
+  profileId: z.string().min(1),
+  pageContext: z.object({
+    url: z.string().optional(),
+    title: z.string().optional(),
+  }).optional(),
+  field: z.object({
+    label: z.string().min(1),
+    type: z.string().optional(),
+    required: z.boolean().optional(),
+    options: z.array(z.string()).nullable().optional(),
+    placeholder: z.string().nullable().optional(),
+  }),
+});
+
+router.post('/draft', async (req, res, next) => {
+  try {
+    const { profileId, pageContext = {}, field } = draftSchema.parse(req.body);
+    const result = await autofillService.draftFieldAnswer(profileId, field, pageContext);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    if (err.name === 'ZodError') {
+      return res.status(400).json({ success: false, error: err.errors[0].message });
+    }
+    if (err.statusCode === 502 || err.statusCode === 404) {
+      return res.status(err.statusCode).json({ success: false, error: err.message });
+    }
+    next(err);
+  }
+});
+
 router.post('/save-answers', async (req, res, next) => {
   try {
     const { profileId, answers } = saveAnswersSchema.parse(req.body);

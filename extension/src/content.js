@@ -5,7 +5,7 @@ import { PortalEngine } from './portalEngine.js';
 
 window.PortalEngine = PortalEngine;
 
-const SCRIPT_VERSION = 'v2025-10-31-live-ok';
+const SCRIPT_VERSION = 'v2025-11-01-content-iife';
 
 (function () {
   'use strict';
@@ -85,6 +85,11 @@ const SCRIPT_VERSION = 'v2025-10-31-live-ok';
       }
       sendResponse({ success: true, text: getJobPageText(), url: window.location.href, isJobPage: true, title: document.title });
       return true;
+    }
+
+    if (request.action === 'ping') {
+      sendResponse({ ok: true, version: SCRIPT_VERSION });
+      return false;
     }
 
     if (request.action === 'getPageProfileId') {
