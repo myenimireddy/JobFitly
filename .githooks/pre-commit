@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+# Fast regression gate — never runs live ATS e2e (too slow / network-dependent).
+# Live portals: make test-e2e
+set -e
+ROOT=$(git rev-parse --show-toplevel)
+cd "$ROOT"
+echo "pre-commit: make test-fast (stack + backend Jest + offline portal mocks)"
+make test-fast

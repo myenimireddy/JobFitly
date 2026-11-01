@@ -56,10 +56,17 @@ assert(!extText.includes('/api/match'), 'extension does not call /api/match');
 assert(!extText.includes('/api/documents'), 'extension does not call /api/documents');
 
 const autofillUi = read('extension/src/popup/AutofillSection.jsx');
-const generateFn = autofillUi.split('const handleAutofill')[1].split('const handleInject')[0];
-assert(!generateFn.includes('injectAutofill'), 'generate does not auto-inject');
-assert(autofillUi.includes("action: 'injectAutofill'"), 'inject still happens on Fill Form Now');
-assert(autofillUi.includes("AUTO_INJECT_ON_GENERATE = false"), 'AUTO_INJECT_ON_GENERATE is false');
+// HITL contract: Fill Form orchestrates; inject only via injectOne; LLM drafts pause.
+assert(autofillUi.includes('handleFillForm'), 'Fill Form entrypoint exists');
+assert(autofillUi.includes('async function injectOne'), 'inject is isolated in injectOne');
+assert(autofillUi.includes("action: 'injectAutofill'"), 'inject still happens via injectAutofill');
+assert(autofillUi.includes('needsReview'), 'ask/llm fields pause for human review');
+assert(autofillUi.includes('startOver'), 'Start over control exists');
+assert(autofillUi.includes('isPageValueComplete'), 'already-filled fields can be skipped');
+
+const panel = read('extension/src/sidepanel/Panel.jsx');
+assert(panel.includes('AutofillSection'), 'Side Panel hosts AutofillSection');
+assert(panel.includes('activeTabId'), 'Side Panel passes active tab id');
 
 const saved = read('frontend/src/pages/SavedAnswers.jsx');
 assert(!saved.includes('cmplb50cy'), 'no hardcoded Saved Answers profile id');

@@ -1,0 +1,10 @@
+{
+  "name": "jobfitly",
+  "private": true,
+  "description": "Root scripts — pre-commit runs offline regression via .githooks/",
+  "scripts": {
+    "prepare": "make install-hooks",
+    "test:fast": "make test-fast",
+    "test": "make test-fast"
+  }
+}
