@@ -18,6 +18,9 @@ const generateSchema = z.object({
     required: z.boolean().optional(),
     options: z.array(z.string()).nullable().optional(),
     placeholder: z.string().nullable().optional(),
+    currentValue: z.union([z.string(), z.null()]).optional(),
+    experienceIndex: z.number().int().nonnegative().nullable().optional(),
+    section: z.string().nullable().optional(),
   })),
 });
 
@@ -57,6 +60,9 @@ const draftSchema = z.object({
     required: z.boolean().optional(),
     options: z.array(z.string()).nullable().optional(),
     placeholder: z.string().nullable().optional(),
+    currentValue: z.union([z.string(), z.null()]).optional(),
+    experienceIndex: z.number().int().nonnegative().nullable().optional(),
+    section: z.string().nullable().optional(),
   }),
 });
 

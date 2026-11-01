@@ -91,6 +91,8 @@ After the first `make dev-extension` or `make build-extension`:
 4. Select the **`extension/dist/`** folder
 5. Pin the extension to your toolbar
 
+Click the JobFitly icon to open the **Side Panel** (not a popup). It stays open while you click fields on the application page — required for one-by-one review and Ask AI.
+
 > After any code change to the extension, the watch mode rebuilds automatically.
 > Click the **refresh icon** on `chrome://extensions` to reload it.
 

@@ -54,7 +54,7 @@ On-demand drafts still land in the HITL textarea for edit + Fill — they do not
 | New shared application fact | `APPLICATION_FIELD_CATALOG` + merge in `applicationFields.js`; wire `buildFacts` |
 | New portal scrape/inject | Prefer `extension/src/portals/<name>.js` + register in `portalEngine.js` |
 | Greenhouse Job Board / React-Select | `extension/src/portals/greenhouseJobBoard.js` only |
-| Fill UX / HITL / consent UI | `extension/src/popup/AutofillSection.jsx` |
+| Fill UX / HITL / consent UI | `extension/src/popup/AutofillSection.jsx` + `sidepanel/Panel.jsx` (Side Panel, not popup) |
 | Resume parse | `backend/src/lib/llmResumeParser.js` + sections helpers |
 | Match score (no LLM) | `backend/src/modules/match/` |
 
