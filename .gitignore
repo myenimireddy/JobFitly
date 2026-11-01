@@ -35,3 +35,8 @@ logs/
 # Test coverage
 coverage/
 
+# Extension test / e2e outputs (screenshots, dumps)
+extension/e2e/artifacts/
+extension/test-results/
+extension/playwright-report/
+

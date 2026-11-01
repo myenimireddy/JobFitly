@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Reddit Greenhouse Fixture</title>
+  <style>
+    .select__menu { display: none; border: 1px solid #ccc; max-height: 200px; overflow: auto; }
+    .select__menu.open { display: block; }
+    .select__option { padding: 6px 10px; cursor: pointer; }
+    .select__option:hover, .select__option.highlight { background: #eee; }
+    .iti__country-list { position: absolute; left: -9999px; }
+    .remix-required { opacity: 0; height: 0; width: 0; }
+  </style>
+</head>
+<body>
+  <div class="application--container">
+    <form id="application-form" class="application--form">
+      <div class="field-wrapper">
+        <label id="first_name-label" for="first_name">First Name*</label>
+        <input id="first_name" type="text" />
+      </div>
+      <div class="field-wrapper">
+        <label id="last_name-label" for="last_name">Last Name*</label>
+        <input id="last_name" type="text" />
+      </div>
+      <div class="field-wrapper">
+        <label id="email-label" for="email">Email*</label>
+        <input id="email" type="text" />
+      </div>
+
+      <fieldset class="phone-input">
+        <legend class="visually-hidden">Phone</legend>
+        <div class="phone-input__country">
+          <label id="country-label" for="country">Country*</label>
+          <div class="select__control" data-rs="country">
+            <div class="select__single-value" data-value-display></div>
+            <input id="country" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-required="true" value="" />
+          </div>
+          <input class="remix-required" required tabindex="-1" aria-hidden="true" value="" data-rs-value="country" />
+          <div class="select__menu" data-rs-menu="country">
+            <div role="option" class="select__option">United States</div>
+            <div role="option" class="select__option">Canada</div>
+            <div role="option" class="select__option">United Kingdom</div>
+          </div>
+        </div>
+        <div class="phone-input__phone">
+          <label id="phone-label" for="phone">Phone*</label>
+          <div class="iti">
+            <ul class="iti__country-list" id="iti-0__country-listbox" role="listbox">
+              <li role="option" class="iti__country" data-dial-code="961" data-country-code="lb">Lebanon<span>+961</span></li>
+              <li role="option" class="iti__country" data-dial-code="1" data-country-code="us">United States<span>+1</span></li>
+              <li role="option" class="iti__country" data-dial-code="91" data-country-code="in">India<span>+91</span></li>
+            </ul>
+            <input id="phone" class="iti__tel-input" type="tel" aria-required="true" value="" />
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="field-wrapper">
+        <label id="candidate-location-label" for="candidate-location">Location (City)*</label>
+        <div class="select__control" data-rs="location">
+          <div class="select__single-value" data-value-display></div>
+          <input id="candidate-location" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-required="true" value="" />
+        </div>
+        <input class="remix-required" required tabindex="-1" aria-hidden="true" value="" data-rs-value="location" />
+        <div class="select__menu" data-rs-menu="location">
+          <div role="option" class="select__option">Austin, Texas, United States</div>
+          <div role="option" class="select__option">Austin, Texas, United States</div>
+          <div role="option" class="select__option">New York, New York, United States</div>
+        </div>
+      </div>
+
+      <div class="field-wrapper">
+        <div class="file-upload" role="group" aria-labelledby="upload-label-resume" aria-required="true">
+          <div id="upload-label-resume" class="label">Resume/CV*</div>
+          <input id="resume" type="file" accept=".pdf,.doc,.docx,.txt,.rtf" required />
+          <p id="resume-error" class="helper-text helper-text--error" hidden>Resume/CV is required.</p>
+        </div>
+      </div>
+
+      <div class="field-wrapper">
+        <label id="linkedin-label" for="linkedin">LinkedIn Profile</label>
+        <input id="linkedin" type="text" />
+      </div>
+      <div class="field-wrapper">
+        <label id="hear-label" for="hear">How did you hear about this job?*</label>
+        <input id="hear" type="text" aria-required="true" />
+      </div>
+      <div class="field-wrapper">
+        <label id="company-label" for="company">Please provide the name of your current (or most recent) company*</label>
+        <input id="company" type="text" aria-required="true" />
+      </div>
+
+      <div class="field-wrapper">
+        <label id="workauth-label" for="workauth">Are you currently authorized to work in the U.S.?*</label>
+        <div class="select__control" data-rs="workauth">
+          <div class="select__single-value" data-value-display></div>
+          <input id="workauth" role="combobox" aria-required="true" value="" />
+        </div>
+        <input class="remix-required" required tabindex="-1" aria-hidden="true" value="" data-rs-value="workauth" />
+        <div class="select__menu" data-rs-menu="workauth">
+          <div role="option" class="select__option">Yes</div>
+          <div role="option" class="select__option">No</div>
+        </div>
+      </div>
+
+      <div class="field-wrapper">
+        <label id="sponsor-label" for="sponsor">Do you now, or will you in the future, require immigration sponsorship to work at Reddit?*</label>
+        <div class="select__control" data-rs="sponsor">
+          <div class="select__single-value" data-value-display></div>
+          <input id="sponsor" role="combobox" aria-required="true" value="" />
+        </div>
+        <input class="remix-required" required tabindex="-1" aria-hidden="true" value="" data-rs-value="sponsor" />
+        <div class="select__menu" data-rs-menu="sponsor">
+          <div role="option" class="select__option">Yes</div>
+          <div role="option" class="select__option">No</div>
+        </div>
+      </div>
+
+      <div class="field-wrapper">
+        <label id="privacy-label" for="privacy">By selecting "I agree," I understand that the information I have provided as part of this job application will be processed in accordance with Reddit's Candidate Privacy Policy. *</label>
+        <div class="select__control" data-rs="privacy">
+          <div class="select__single-value" data-value-display></div>
+          <input id="privacy" role="combobox" aria-required="true" value="" />
+        </div>
+        <input class="remix-required" required tabindex="-1" aria-hidden="true" value="" data-rs-value="privacy" />
+        <div class="select__menu" data-rs-menu="privacy">
+          <div role="option" class="select__option">I agree</div>
+          <div role="option" class="select__option">I do not agree</div>
+        </div>
+      </div>
+
+      <div id="demographic-section">
+        <div class="select">
+          <label id="gender-label" for="gender">What gender identity do you most closely identify with? *</label>
+          <div class="select__control" data-rs="gender">
+            <div class="select__single-value" data-value-display></div>
+            <input id="gender" role="combobox" aria-required="true" value="" />
+          </div>
+          <input class="remix-required" required tabindex="-1" aria-hidden="true" value="" data-rs-value="gender" />
+          <div class="select__menu" data-rs-menu="gender">
+            <div role="option" class="select__option">Male</div>
+            <div role="option" class="select__option">Female</div>
+            <div role="option" class="select__option">Non-binary</div>
+            <div role="option" class="select__option">Decline to self identify</div>
+          </div>
+        </div>
+
+        <div class="select">
+          <label id="trans-label" for="trans">Are you a person of transgender experience? *</label>
+          <div class="select__control" data-rs="trans">
+            <div class="select__single-value" data-value-display></div>
+            <input id="trans" role="combobox" aria-required="true" value="" />
+          </div>
+          <input class="remix-required" required tabindex="-1" aria-hidden="true" value="" data-rs-value="trans" />
+          <div class="select__menu" data-rs-menu="trans">
+            <div role="option" class="select__option">Yes</div>
+            <div role="option" class="select__option">No</div>
+            <div role="option" class="select__option">Decline to self identify</div>
+          </div>
+        </div>
+
+        <div class="select">
+          <label id="orient-label" for="orient">What sexual orientation do you most closely identify with? *</label>
+          <div class="select__control" data-rs="orient">
+            <div class="select__single-value" data-value-display></div>
+            <input id="orient" role="combobox" aria-required="true" value="" />
+          </div>
+          <input class="remix-required" required tabindex="-1" aria-hidden="true" value="" data-rs-value="orient" />
+          <div class="select__menu" data-rs-menu="orient">
+            <div role="option" class="select__option">Heterosexual</div>
+            <div role="option" class="select__option">Gay</div>
+            <div role="option" class="select__option">Decline to self identify</div>
+          </div>
+        </div>
+
+        <div class="select">
+          <label id="disability-label" for="disability">Do you live with a disability (as outlined by the ADA)?*</label>
+          <div class="select__control" data-rs="disability">
+            <div class="select__single-value" data-value-display></div>
+            <input id="disability" role="combobox" aria-required="true" value="" />
+          </div>
+          <input class="remix-required" required tabindex="-1" aria-hidden="true" value="" data-rs-value="disability" />
+          <div class="select__menu" data-rs-menu="disability">
+            <div role="option" class="select__option">Yes</div>
+            <div role="option" class="select__option">No</div>
+            <div role="option" class="select__option">Decline to self identify</div>
+          </div>
+        </div>
+
+        <div class="select">
+          <label id="veteran-label" for="veteran">Are you a veteran/have you served in the military? *</label>
+          <div class="select__control" data-rs="veteran">
+            <div class="select__single-value" data-value-display></div>
+            <input id="veteran" role="combobox" aria-required="true" value="" />
+          </div>
+          <input class="remix-required" required tabindex="-1" aria-hidden="true" value="" data-rs-value="veteran" />
+          <div class="select__menu" data-rs-menu="veteran">
+            <div role="option" class="select__option">Yes</div>
+            <div role="option" class="select__option">No</div>
+            <div role="option" class="select__option">Decline to self identify</div>
+          </div>
+        </div>
+
+        <div class="select">
+          <label id="ethnicity-label" for="ethnicity">Please select up to 2 ethnicities that you most closely identify with.*</label>
+          <div class="select__control" data-rs="ethnicity">
+            <div class="select__single-value" data-value-display></div>
+            <input id="ethnicity" role="combobox" aria-required="true" value="" />
+          </div>
+          <input class="remix-required" required tabindex="-1" aria-hidden="true" value="" data-rs-value="ethnicity" />
+          <div class="select__menu" data-rs-menu="ethnicity">
+            <div role="option" class="select__option">Asian</div>
+            <div role="option" class="select__option">White</div>
+            <div role="option" class="select__option">Decline to self identify</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="checkbox" id="gdpr_demographic_data_consent_given">
+        <input type="checkbox" id="gdpr_demographic_data_consent_given_1" name="gdpr_demographic_data_consent_given" aria-required="true" required value="1" />
+        <label for="gdpr_demographic_data_consent_given_1">By checking this box, I consent to Reddit collecting, storing, and processing my responses to the demographic data surveys above.*</label>
+      </div>
+
+      <button type="submit">Submit application</button>
+    </form>
+  </div>
+
+  <script>
+    (function () {
+      function commit(key, text) {
+        const required = document.querySelector('[data-rs-value="' + key + '"]');
+        const control = document.querySelector('[data-rs="' + key + '"]');
+        const input = control && control.querySelector('input');
+        const display = control && control.querySelector('[data-value-display]');
+        if (required) required.value = text;
+        if (display) display.textContent = text;
+        if (input) {
+          input.value = '';
+          input.setAttribute('aria-expanded', 'false');
+        }
+        document.querySelectorAll('.select__menu').forEach((m) => m.classList.remove('open'));
+      }
+
+      document.querySelectorAll('[data-rs]').forEach((control) => {
+        const key = control.getAttribute('data-rs');
+        const menu = document.querySelector('[data-rs-menu="' + key + '"]');
+        const input = control.querySelector('input');
+        const openMenu = (e) => {
+          e.preventDefault();
+          document.querySelectorAll('.select__menu').forEach((m) => m.classList.remove('open'));
+          if (menu) menu.classList.add('open');
+          if (input) {
+            input.focus();
+            input.setAttribute('aria-expanded', 'true');
+          }
+        };
+        control.addEventListener('pointerdown', openMenu);
+        control.addEventListener('mousedown', openMenu);
+        if (menu) {
+          menu.querySelectorAll('[role="option"]').forEach((opt) => {
+            opt.addEventListener('mousedown', (e) => {
+              e.preventDefault();
+              commit(key, (opt.textContent || '').trim());
+            });
+            opt.addEventListener('click', (e) => {
+              e.preventDefault();
+              commit(key, (opt.textContent || '').trim());
+            });
+          });
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

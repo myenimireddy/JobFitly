@@ -15,6 +15,8 @@ describe('OllamaLLM', () => {
     expect(mockChat).toHaveBeenCalled();
     const arg = mockChat.mock.calls[0][0];
     expect(arg.format).toBe('json');
+    expect(arg.keep_alive).toBe('30m');
     expect(arg.options.temperature).toBe(0);
+    expect(arg.options.num_ctx).toBe(8192);
   });
 });

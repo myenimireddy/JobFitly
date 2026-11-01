@@ -6,6 +6,7 @@ const { sanitizeProfile, restoreAnswers, isCloudProvider } = require('../../lib/
 const config = require('../../config');
 const {
   canonicalKey,
+  storageKeyForAnswer,
   isBadLabel,
   planField,
   applyLlmAnswer,
@@ -25,8 +26,9 @@ Rules:
 - For yes/no, radio, or select: pick only from the provided options, or return null.
 - Answers must be strings or null.
 
-Return ONLY a JSON array:
-[{ "label": "<field label>", "answer": "<string or null>", "missing": false }]`;
+Always return a JSON array with exactly one object per input field (even if there is only one field):
+[{ "label": "<field label>", "answer": "<string or null>", "missing": false }]
+Never return a bare object.`;
 }
 
 function buildUserPrompt(sanitizedProfile, fields, pageContext) {
@@ -121,10 +123,16 @@ class AutofillService {
       if (!label || !answer) return;
       if (isBadLabel(label)) return;
       const val = String(answer).trim();
-      if (val.length <= 1) return;
+      if (val.length === 0) return;
       if (/^\d+$/.test(val) && val.length < 3) return;
       if (/^\[.*\]$/.test(val)) return;
-      extraAnswers[canonicalKey(label)] = val;
+      const allowsDial = /country|phone|dial|calling/i.test(label);
+      // Never persist dial codes onto orientation / gender / ethnicity / etc.
+      if (!allowsDial && (/^\+\d{1,4}$/.test(val) || (/\+\d{1,4}\b/.test(val) && val.length <= 48))) {
+        return;
+      }
+      // Dial "Country*" → phone_country so it cannot poison address Country.
+      extraAnswers[storageKeyForAnswer(label, val)] = val;
       saved += 1;
     });
 

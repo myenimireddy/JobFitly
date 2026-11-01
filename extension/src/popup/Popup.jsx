@@ -55,12 +55,19 @@ export function Popup() {
         savedProfileId = await getPageProfileId();
         if (savedProfileId) await setProfileId(savedProfileId);
       }
-      if (!savedProfileId) return;
       try {
-        const response = await fetch(`http://localhost:3000/api/profile/${savedProfileId}`);
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success && result.data) setProfile(result.data);
+        let result = null;
+        if (savedProfileId) {
+          const response = await fetch(`http://localhost:3000/api/profile/${savedProfileId}`);
+          if (response.ok) result = await response.json();
+        }
+        if (!result?.data) {
+          const response = await fetch('http://localhost:3000/api/profile/latest');
+          if (response.ok) result = await response.json();
+        }
+        if (result?.success && result.data) {
+          setProfile(result.data);
+          await setProfileId(result.data.id);
         }
       } catch (err) {
         console.error('Failed to load profile:', err);

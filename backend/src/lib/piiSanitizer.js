@@ -41,10 +41,18 @@ function sanitizeProfile(parsedProfile) {
     return placeholder;
   }
 
+  const phoneStr = (() => {
+    if (!pi.phone) return '';
+    if (typeof pi.phone === 'object') {
+      return String(pi.phone.nationalNumber || pi.phone.number || '').trim();
+    }
+    return String(pi.phone).trim();
+  })();
+
   const sanitizedPersonalInfo = {
     fullName:  reg(PLACEHOLDER.fullName,  pi.fullName),
     email:     reg(PLACEHOLDER.email,     pi.email),
-    phone:     reg(PLACEHOLDER.phone,     pi.phone),
+    phone:     reg(PLACEHOLDER.phone,     phoneStr),
     linkedin:  reg(PLACEHOLDER.linkedin,  pi.linkedin),
     website:   reg(PLACEHOLDER.website,   pi.website),
     location:  reg(PLACEHOLDER.location,  pi.location),

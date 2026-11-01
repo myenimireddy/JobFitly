@@ -27,7 +27,7 @@ class OllamaLLM extends BaseLLM {
    * @param {string} userPrompt - User content
    * @returns {Promise<string>} LLM response
    */
-  async extract(systemPrompt, userPrompt) {
+  async extract(systemPrompt, userPrompt, timeoutMs) {
     console.log('\n━━━ [ollama] REQUEST ━━━');
     console.log(`  model  : ${this.model}`);
     console.log(`  system : ${systemPrompt.slice(0, 200)}${systemPrompt.length > 200 ? '...' : ''}`);
@@ -36,23 +36,27 @@ class OllamaLLM extends BaseLLM {
     console.log(' ', userPrompt.slice(0, 400).replace(/\n/g, '\n  '));
     const t0 = Date.now();
 
-    const TIMEOUT_MS = 120_000; // 2 min — resume parsing can be slow on first run
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
+    const TIMEOUT_MS = timeoutMs || 10 * 60 * 1000;
+    let timer;
     try {
-      const response = await this.client.chat({
-        model: this.model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        format: 'json',
-        options: {
-          temperature: 0,
-        },
-        signal: controller.signal,
-      });
+      const response = await Promise.race([
+        this.client.chat({
+          model: this.model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          format: 'json',
+          keep_alive: '30m',
+          options: {
+            temperature: 0,
+            num_ctx: 8192,
+          },
+        }),
+        new Promise((_, reject) => {
+          timer = setTimeout(() => reject(Object.assign(new Error('timeout'), { name: 'AbortError' })), TIMEOUT_MS);
+        }),
+      ]);
       clearTimeout(timer);
 
       const raw = response.message.content;
@@ -83,12 +87,30 @@ class OllamaLLM extends BaseLLM {
 
       return raw;
     } catch (error) {
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
       const msg = error.name === 'AbortError'
         ? `Ollama timed out after ${TIMEOUT_MS / 1000}s — model may still be loading, try again`
         : `Ollama LLM failed: ${error.message}`;
       console.error('[ollama] ❌ extraction error:', msg);
       throw new Error(msg);
+    }
+  }
+
+  /**
+   * Load the model into RAM so the first real parse is not a cold start.
+   */
+  async warmup() {
+    try {
+      await this.client.chat({
+        model: this.model,
+        messages: [{ role: 'user', content: '{"ok":true}' }],
+        format: 'json',
+        keep_alive: '30m',
+        options: { temperature: 0, num_predict: 8, num_ctx: 512 },
+      });
+      console.log(`[ollama] ${this.model} loaded into memory`);
+    } catch (err) {
+      console.warn(`[ollama] warmup skipped: ${err.message}`);
     }
   }
 }

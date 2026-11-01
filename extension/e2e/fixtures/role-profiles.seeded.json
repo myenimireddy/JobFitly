@@ -1,0 +1,254 @@
+{
+  "seededAt": "2026-10-31T16:19:24.511Z",
+  "count": 10,
+  "portals": {
+    "greenhouse": {
+      "url": "https://job-boards.greenhouse.io/reddit/jobs/8194576",
+      "title": "Software Engineer — Reddit (Greenhouse)"
+    },
+    "lever": {
+      "url": "https://jobs.lever.co/leverdemo/58db3f8e-b108-47d1-9e6e-87a1712497cd/apply",
+      "title": "Account Executive — Lever Demo"
+    },
+    "ashby": {
+      "url": "https://jobs.ashbyhq.com/ramp/cc0af88a-2a19-493d-93cf-c5090f986f1f/application",
+      "title": "Partnerships / GTM — Ramp (Ashby)"
+    },
+    "workday": {
+      "url": "https://adobe.wd5.myworkdayjobs.com/en-US/external_experienced/job/San-Jose/Director-of-Engineering--Real-Time-Experience--RTX-_R172776",
+      "title": "Director of Engineering — Adobe (Workday)"
+    }
+  },
+  "profiles": [
+    {
+      "key": "business",
+      "id": "cmvwk03xc0000s7rjbyyzjnc7",
+      "displayName": "Role Business User",
+      "roleTitle": "Business Analyst",
+      "company": "Accenture",
+      "email": "priya.business.role1@jobfitly.test",
+      "phone": "2145550101",
+      "firstName": "Priya",
+      "lastName": "Sharma",
+      "city": "Austin",
+      "portal": "lever",
+      "jobUrl": "https://jobs.lever.co/leverdemo/58db3f8e-b108-47d1-9e6e-87a1712497cd/apply",
+      "jobTitle": "Account Executive — Lever Demo",
+      "captureComplete": true,
+      "facts": {
+        "phone": "2145550101",
+        "phoneCountryLabel": "United States +1",
+        "city": "Austin",
+        "currentTitle": "Business Analyst",
+        "currentCompany": "Accenture"
+      }
+    },
+    {
+      "key": "fullstack",
+      "id": "cmvwk03xf0001s7rjrkqtp8vd",
+      "displayName": "Role Full Stack User",
+      "roleTitle": "Full Stack Engineer",
+      "company": "Stripe",
+      "email": "alex.fullstack.role2@jobfitly.test",
+      "phone": "4155550102",
+      "firstName": "Alex",
+      "lastName": "Chen",
+      "city": "San Francisco",
+      "portal": "greenhouse",
+      "jobUrl": "https://job-boards.greenhouse.io/reddit/jobs/8194576",
+      "jobTitle": "Software Engineer — Reddit (Greenhouse)",
+      "captureComplete": true,
+      "facts": {
+        "phone": "4155550102",
+        "phoneCountryLabel": "United States +1",
+        "city": "San Francisco",
+        "currentTitle": "Full Stack Engineer",
+        "currentCompany": "Stripe"
+      }
+    },
+    {
+      "key": "devops",
+      "id": "cmvwk03xh0002s7rjlr17try1",
+      "displayName": "Role DevOps User",
+      "roleTitle": "DevOps Engineer",
+      "company": "HashiCorp",
+      "email": "jordan.devops.role3@jobfitly.test",
+      "phone": "2065550103",
+      "firstName": "Jordan",
+      "lastName": "Nguyen",
+      "city": "Seattle",
+      "portal": "ashby",
+      "jobUrl": "https://jobs.ashbyhq.com/ramp/cc0af88a-2a19-493d-93cf-c5090f986f1f/application",
+      "jobTitle": "Partnerships / GTM — Ramp (Ashby)",
+      "captureComplete": true,
+      "facts": {
+        "phone": "2065550103",
+        "phoneCountryLabel": "United States +1",
+        "city": "Seattle",
+        "currentTitle": "DevOps Engineer",
+        "currentCompany": "HashiCorp"
+      }
+    },
+    {
+      "key": "frontend",
+      "id": "cmvwk03xk0003s7rjk79ippii",
+      "displayName": "Role Frontend User",
+      "roleTitle": "Frontend Engineer",
+      "company": "Figma",
+      "email": "sam.frontend.role4@jobfitly.test",
+      "phone": "6465550104",
+      "firstName": "Sam",
+      "lastName": "Okoye",
+      "city": "New York",
+      "portal": "greenhouse",
+      "jobUrl": "https://job-boards.greenhouse.io/reddit/jobs/8194576",
+      "jobTitle": "Software Engineer — Reddit (Greenhouse)",
+      "captureComplete": true,
+      "facts": {
+        "phone": "6465550104",
+        "phoneCountryLabel": "United States +1",
+        "city": "New York",
+        "currentTitle": "Frontend Engineer",
+        "currentCompany": "Figma"
+      }
+    },
+    {
+      "key": "backend",
+      "id": "cmvwk03xm0004s7rj63l5h4sl",
+      "displayName": "Role Backend User",
+      "roleTitle": "Backend Engineer",
+      "company": "Uber",
+      "email": "diego.backend.role5@jobfitly.test",
+      "phone": "3125550105",
+      "firstName": "Diego",
+      "lastName": "Martinez",
+      "city": "Chicago",
+      "portal": "workday",
+      "jobUrl": "https://adobe.wd5.myworkdayjobs.com/en-US/external_experienced/job/San-Jose/Director-of-Engineering--Real-Time-Experience--RTX-_R172776",
+      "jobTitle": "Director of Engineering — Adobe (Workday)",
+      "captureComplete": true,
+      "facts": {
+        "phone": "3125550105",
+        "phoneCountryLabel": "United States +1",
+        "city": "Chicago",
+        "currentTitle": "Backend Engineer",
+        "currentCompany": "Uber"
+      }
+    },
+    {
+      "key": "data",
+      "id": "cmvwk03xo0005s7rj22vsuejt",
+      "displayName": "Role Data Scientist User",
+      "roleTitle": "Data Scientist",
+      "company": "Databricks",
+      "email": "maya.data.role6@jobfitly.test",
+      "phone": "6175550106",
+      "firstName": "Maya",
+      "lastName": "Patel",
+      "city": "Boston",
+      "portal": "ashby",
+      "jobUrl": "https://jobs.ashbyhq.com/ramp/cc0af88a-2a19-493d-93cf-c5090f986f1f/application",
+      "jobTitle": "Partnerships / GTM — Ramp (Ashby)",
+      "captureComplete": true,
+      "facts": {
+        "phone": "6175550106",
+        "phoneCountryLabel": "United States +1",
+        "city": "Boston",
+        "currentTitle": "Data Scientist",
+        "currentCompany": "Databricks"
+      }
+    },
+    {
+      "key": "product",
+      "id": "cmvwk03xp0006s7rjmfm4s35m",
+      "displayName": "Role Product Manager User",
+      "roleTitle": "Product Manager",
+      "company": "Atlassian",
+      "email": "chris.product.role7@jobfitly.test",
+      "phone": "3035550107",
+      "firstName": "Chris",
+      "lastName": "Baker",
+      "city": "Denver",
+      "portal": "lever",
+      "jobUrl": "https://jobs.lever.co/leverdemo/58db3f8e-b108-47d1-9e6e-87a1712497cd/apply",
+      "jobTitle": "Account Executive — Lever Demo",
+      "captureComplete": true,
+      "facts": {
+        "phone": "3035550107",
+        "phoneCountryLabel": "United States +1",
+        "city": "Denver",
+        "currentTitle": "Product Manager",
+        "currentCompany": "Atlassian"
+      }
+    },
+    {
+      "key": "qa",
+      "id": "cmvwk03xr0007s7rja3qnmt55",
+      "displayName": "Role QA User",
+      "roleTitle": "QA Engineer",
+      "company": "Nike",
+      "email": "riley.qa.role8@jobfitly.test",
+      "phone": "5035550108",
+      "firstName": "Riley",
+      "lastName": "Kim",
+      "city": "Portland",
+      "portal": "lever",
+      "jobUrl": "https://jobs.lever.co/leverdemo/58db3f8e-b108-47d1-9e6e-87a1712497cd/apply",
+      "jobTitle": "Account Executive — Lever Demo",
+      "captureComplete": true,
+      "facts": {
+        "phone": "5035550108",
+        "phoneCountryLabel": "United States +1",
+        "city": "Portland",
+        "currentTitle": "QA Engineer",
+        "currentCompany": "Nike"
+      }
+    },
+    {
+      "key": "mobile",
+      "id": "cmvwk03xs0008s7rjtlaopcnq",
+      "displayName": "Role Mobile User",
+      "roleTitle": "Mobile Engineer",
+      "company": "Snap",
+      "email": "taylor.mobile.role9@jobfitly.test",
+      "phone": "4045550109",
+      "firstName": "Taylor",
+      "lastName": "Brooks",
+      "city": "Atlanta",
+      "portal": "workday",
+      "jobUrl": "https://adobe.wd5.myworkdayjobs.com/en-US/external_experienced/job/San-Jose/Director-of-Engineering--Real-Time-Experience--RTX-_R172776",
+      "jobTitle": "Director of Engineering — Adobe (Workday)",
+      "captureComplete": true,
+      "facts": {
+        "phone": "4045550109",
+        "phoneCountryLabel": "United States +1",
+        "city": "Atlanta",
+        "currentTitle": "Mobile Engineer",
+        "currentCompany": "Snap"
+      }
+    },
+    {
+      "key": "security",
+      "id": "cmvwk03xv0009s7rjrfub0rg2",
+      "displayName": "Role Security User",
+      "roleTitle": "Security Engineer",
+      "company": "CrowdStrike",
+      "email": "aisha.security.role10@jobfitly.test",
+      "phone": "7035550110",
+      "firstName": "Aisha",
+      "lastName": "Hassan",
+      "city": "Arlington",
+      "portal": "greenhouse",
+      "jobUrl": "https://job-boards.greenhouse.io/reddit/jobs/8194576",
+      "jobTitle": "Software Engineer — Reddit (Greenhouse)",
+      "captureComplete": true,
+      "facts": {
+        "phone": "7035550110",
+        "phoneCountryLabel": "United States +1",
+        "city": "Arlington",
+        "currentTitle": "Security Engineer",
+        "currentCompany": "CrowdStrike"
+      }
+    }
+  ]
+}

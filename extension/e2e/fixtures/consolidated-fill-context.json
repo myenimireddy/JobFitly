@@ -1,0 +1,446 @@
+{
+  "_meta": {
+    "scrapedAt": "2026-10-31",
+    "sources": {
+      "greenhouse": "https://job-boards.greenhouse.io/reddit/jobs/8194576",
+      "lever": "https://jobs.lever.co/leverdemo/58db3f8e-b108-47d1-9e6e-87a1712497cd/apply",
+      "ashby": "https://jobs.ashbyhq.com/ramp/cc0af88a-2a19-493d-93cf-c5090f986f1f/application",
+      "workday": "https://adobe.wd5.myworkdayjobs.com/.../apply/applyManually"
+    },
+    "note": "Canonical keys align with backend autofill INTENTS. Portal labels are exact scrape text (asterisks stripped). Prefer exact option strings when filling selects."
+  },
+  "profileFacts": {
+    "firstName": "Alex",
+    "lastName": "Rivera",
+    "fullName": "Alex Rivera",
+    "preferredName": "Alex",
+    "email": "alex.rivera@example.com",
+    "phoneNational": "5551234567",
+    "phoneE164": "+15551234567",
+    "phoneDisplay": "+1 (555) 123-4567",
+    "country": "United States",
+    "countryPhoneCode": "United States +1",
+    "city": "Austin",
+    "location": "Austin, TX",
+    "addressLine1": null,
+    "state": "Texas",
+    "postalCode": null,
+    "linkedin": "https://www.linkedin.com/in/alexrivera-test/",
+    "github": null,
+    "website": null,
+    "currentCompany": "Acme Corp",
+    "currentTitle": null,
+    "workAuthUS": "Yes",
+    "sponsorshipRequired": "Yes",
+    "age18Plus": "Yes",
+    "gender": "Male",
+    "transgender": "No",
+    "orientation": "Heterosexual",
+    "ethnicityGreenhouse": "South Asian",
+    "ethnicityLever": "Asian (Not Hispanic or Latino)",
+    "disability": "No",
+    "veteran": "No",
+    "hearAbout": "LinkedIn",
+    "pronouns": null,
+    "previouslyEmployedAtEmployer": "No"
+  },
+  "canonical": [
+    {
+      "key": "first_name",
+      "answer": "Alex",
+      "labels": {
+        "greenhouse": ["First Name"],
+        "workday": ["First Name"],
+        "lever": [],
+        "ashby": []
+      }
+    },
+    {
+      "key": "last_name",
+      "answer": "Rivera",
+      "labels": {
+        "greenhouse": ["Last Name"],
+        "workday": ["Last Name"],
+        "lever": [],
+        "ashby": []
+      }
+    },
+    {
+      "key": "full_name",
+      "answer": "Alex Rivera",
+      "labels": {
+        "lever": ["Full name", "Name"],
+        "ashby": ["Legal Name"],
+        "greenhouse": ["Preferred First Name"],
+        "workday": []
+      },
+      "notes": "GH Preferred First Name → first name only (Alex). Lever has a second Name field near EEO/date."
+    },
+    {
+      "key": "email",
+      "answer": "alex.rivera@example.com",
+      "labels": {
+        "greenhouse": ["Email"],
+        "lever": ["Email"],
+        "ashby": ["Email"],
+        "workday": ["Email"]
+      }
+    },
+    {
+      "key": "phone",
+      "answer": "5551234567",
+      "altAnswers": {
+        "withCountryDisplay": "+1 (555) 123-4567",
+        "e164": "+15551234567"
+      },
+      "labels": {
+        "greenhouse": ["Phone"],
+        "lever": ["Phone"],
+        "ashby": ["Phone"],
+        "workday": ["Phone Number"]
+      },
+      "notes": "Never inject bare '+1' into the tel input. GH uses intl-tel; country chip is separate."
+    },
+    {
+      "key": "country",
+      "answer": "United States",
+      "labels": {
+        "greenhouse": ["Country"],
+        "workday": ["Country"],
+        "lever": [],
+        "ashby": []
+      },
+      "optionHints": {
+        "greenhouse": "United States +1 (display may collapse to +1 after commit)"
+      }
+    },
+    {
+      "key": "country_phone_code",
+      "answer": "United States +1",
+      "labels": {
+        "workday": ["Country Phone Code"],
+        "greenhouse": [],
+        "lever": [],
+        "ashby": []
+      }
+    },
+    {
+      "key": "phone_device_type",
+      "answer": "Mobile",
+      "labels": {
+        "workday": ["Phone Device Type"],
+        "greenhouse": [],
+        "lever": [],
+        "ashby": []
+      }
+    },
+    {
+      "key": "phone_extension",
+      "answer": null,
+      "labels": {
+        "workday": ["Phone Extension"],
+        "greenhouse": [],
+        "lever": [],
+        "ashby": []
+      }
+    },
+    {
+      "key": "city",
+      "answer": "Austin",
+      "labels": {
+        "greenhouse": ["Location (City)"],
+        "workday": ["City"],
+        "lever": ["Current location"],
+        "ashby": ["Where do you plan on working from (for payroll tax purposes)?"]
+      },
+      "altAnswers": {
+        "lever": "Austin, TX",
+        "greenhouseCommit": "Austin, Texas, United States"
+      }
+    },
+    {
+      "key": "address",
+      "answer": null,
+      "labels": {
+        "workday": ["Address Line 1", "Address Line 2", "State", "Postal Code"],
+        "greenhouse": [],
+        "lever": [],
+        "ashby": []
+      },
+      "notes": "Missing from profile — HITL / leave blank unless known."
+    },
+    {
+      "key": "linkedin",
+      "answer": "https://www.linkedin.com/in/alexrivera-test/",
+      "labels": {
+        "greenhouse": ["LinkedIn Profile"],
+        "lever": ["LinkedIn URL"],
+        "ashby": ["LinkedIn Profile"],
+        "workday": []
+      }
+    },
+    {
+      "key": "website",
+      "answer": null,
+      "labels": {
+        "lever": ["Github URL", "Other Website URL", "Video Link URL"],
+        "greenhouse": [],
+        "ashby": [],
+        "workday": []
+      }
+    },
+    {
+      "key": "current_company",
+      "answer": "Acme Corp",
+      "labels": {
+        "greenhouse": ["Please provide the name of your current (or most recent) company"],
+        "lever": ["Current company"],
+        "ashby": [],
+        "workday": []
+      },
+      "notes": "Strip city/state if profile stores 'Acme Corp'."
+    },
+    {
+      "key": "work_auth",
+      "answer": "Yes",
+      "labels": {
+        "greenhouse": ["Are you currently authorized to work in the U.S.?"],
+        "lever": ["Are you eligible to work in the United States?"],
+        "ashby": [],
+        "workday": []
+      }
+    },
+    {
+      "key": "sponsorship",
+      "answer": "Yes",
+      "labels": {
+        "greenhouse": ["Do you now, or will you in the future, require immigration sponsorship to work at Reddit?"],
+        "lever": [],
+        "ashby": [],
+        "workday": []
+      }
+    },
+    {
+      "key": "age_18",
+      "answer": "Yes",
+      "labels": {
+        "lever": ["Are you 18 or over?"],
+        "greenhouse": [],
+        "ashby": [],
+        "workday": []
+      }
+    },
+    {
+      "key": "source",
+      "answer": "LinkedIn",
+      "labels": {
+        "greenhouse": ["How did you hear about this job?"],
+        "workday": ["How Did You Hear About Us?"],
+        "lever": [],
+        "ashby": []
+      }
+    },
+    {
+      "key": "pronouns",
+      "answer": null,
+      "labels": {
+        "lever": ["Pronouns"],
+        "greenhouse": [],
+        "ashby": [],
+        "workday": []
+      }
+    },
+    {
+      "key": "gender",
+      "answer": "Male",
+      "labels": {
+        "greenhouse": ["What gender identity do you most closely identify with?"],
+        "lever": ["Gender", "What gender do you identify as?"],
+        "ashby": [],
+        "workday": []
+      },
+      "optionHints": {
+        "greenhouse": ["Male", "Female", "Non-binary", "Agender", "Genderfluid", "Gender non-conforming", "Genderqueer", "Not listed", "I don't wish to answer"],
+        "lever_eeo": ["Male", "Female", "Decline to self-identify"],
+        "lever_demo": ["Female", "Male", "Non-binary"]
+      }
+    },
+    {
+      "key": "transgender",
+      "answer": "No",
+      "labels": {
+        "greenhouse": ["Are you a person of transgender experience?"],
+        "lever": [],
+        "ashby": [],
+        "workday": []
+      }
+    },
+    {
+      "key": "orientation",
+      "answer": "Heterosexual",
+      "labels": {
+        "greenhouse": ["What sexual orientation do you most closely identify with?"],
+        "lever": [],
+        "ashby": [],
+        "workday": []
+      }
+    },
+    {
+      "key": "ethnicity",
+      "answerByPortal": {
+        "greenhouse": "South Asian",
+        "lever": "Asian (Not Hispanic or Latino)"
+      },
+      "labels": {
+        "greenhouse": ["Please select up to 2 ethnicities that you most closely identify with."],
+        "lever": ["Race"],
+        "ashby": [],
+        "workday": []
+      },
+      "notes": "Bare 'asian' is ambiguous on GH (East Asian vs South Asian) — must pick exact option. Do not hardcode EEO lists in inject code; snap from scraped options.",
+      "optionHints": {
+        "greenhouse": ["American Indian or Alaska Native", "Black or African American", "East Asian", "South Asian", "Hispanic or Latinx", "Middle Eastern or North African", "Native Hawaiian or Other Pacific Islander", "White", "I don't wish to answer"],
+        "lever": ["Hispanic or Latino", "White (Not Hispanic or Latino)", "Black or African American (Not Hispanic or Latino)", "Native Hawaiian or Other Pacific Islander (Not Hispanic or Latino)", "Asian (Not Hispanic or Latino)", "American Indian or Alaska Native (Not Hispanic or Latino)", "Two or More Races (Not Hispanic or Latino)", "Decline to self-identify"]
+      }
+    },
+    {
+      "key": "disability",
+      "answerByPortal": {
+        "greenhouse": "No, I do not have a disability, or have a history/record of having a disability",
+        "lever": "No, I do not have a disability and have not had one in the past"
+      },
+      "shortAnswer": "No",
+      "labels": {
+        "greenhouse": ["Do you live with a disability (as outlined by the ADA)?"],
+        "lever": ["Disability status"],
+        "ashby": [],
+        "workday": []
+      }
+    },
+    {
+      "key": "veteran",
+      "answerByPortal": {
+        "greenhouse": "No military service",
+        "lever": "I am not a protected veteran"
+      },
+      "shortAnswer": "No",
+      "labels": {
+        "greenhouse": ["Are you a veteran/have you served in the military?"],
+        "lever": ["Veteran status"],
+        "ashby": [],
+        "workday": []
+      }
+    },
+    {
+      "key": "consent",
+      "answer": "I agree",
+      "labels": {
+        "greenhouse": [
+          "By selecting \"I agree,\" I understand that the information I have provided as part of this job application will be processed in accordance with Reddit's Candidate Privacy Policy.",
+          "By checking this box, I consent to Reddit collecting, storing, and processing my responses to the demographic data surveys above."
+        ],
+        "lever": [],
+        "ashby": [],
+        "workday": []
+      }
+    },
+    {
+      "key": "employer_specific",
+      "answer": null,
+      "labels": {
+        "lever": ["Which location are you applying for?", "What is your age range?", "Date"],
+        "ashby": [
+          "Are you currently based in the San Francisco Bay Area?",
+          "This role requires deep relationships within the AI ecosystem. Please briefly describe your experience working with AI-native companies, labs, founders, or investors, and include examples of the types of partnerships, products, investments, or ecosystem relationships you’ve personally led or developed."
+        ],
+        "workday": ["Have you been employed by Adobe in the past?"],
+        "greenhouse": []
+      },
+      "notes": "Job/employer-specific — LLM draft or HITL. Workday past-employee → No for this profile."
+    },
+    {
+      "key": "resume",
+      "answer": null,
+      "labels": {
+        "greenhouse": ["Resume/CV"],
+        "lever": ["Resume"],
+        "ashby": ["Resume"],
+        "workday": ["Resume"]
+      },
+      "notes": "File upload — never invent; leave empty in smokes so submit cannot complete."
+    }
+  ],
+  "byPortal": {
+    "greenhouse": [
+      { "label": "First Name", "type": "text", "required": true, "canonical": "first_name", "answer": "Alex" },
+      { "label": "Last Name", "type": "text", "required": true, "canonical": "last_name", "answer": "Rivera" },
+      { "label": "Preferred First Name", "type": "text", "required": false, "canonical": "full_name", "answer": "Alex" },
+      { "label": "Email", "type": "text", "required": true, "canonical": "email", "answer": "alex.rivera@example.com" },
+      { "label": "Country", "type": "select", "required": true, "canonical": "country", "answer": "United States" },
+      { "label": "Phone", "type": "tel", "required": true, "canonical": "phone", "answer": "+1 (555) 123-4567" },
+      { "label": "Location (City)", "type": "select", "required": true, "canonical": "city", "answer": "Austin" },
+      { "label": "LinkedIn Profile", "type": "text", "required": false, "canonical": "linkedin", "answer": "https://www.linkedin.com/in/alexrivera-test/" },
+      { "label": "How did you hear about this job?", "type": "text", "required": true, "canonical": "source", "answer": "LinkedIn" },
+      { "label": "Please provide the name of your current (or most recent) company", "type": "text", "required": true, "canonical": "current_company", "answer": "Acme Corp" },
+      { "label": "Are you currently authorized to work in the U.S.?", "type": "select", "required": true, "canonical": "work_auth", "answer": "Yes" },
+      { "label": "Do you now, or will you in the future, require immigration sponsorship to work at Reddit?", "type": "select", "required": true, "canonical": "sponsorship", "answer": "Yes" },
+      { "label": "By selecting \"I agree,\" I understand that the information I have provided as part of this job application will be processed in accordance with Reddit's Candidate Privacy Policy.", "type": "select", "required": true, "canonical": "consent", "answer": "I agree" },
+      { "label": "What gender identity do you most closely identify with?", "type": "select", "required": true, "canonical": "gender", "answer": "Male" },
+      { "label": "Are you a person of transgender experience?", "type": "select", "required": true, "canonical": "transgender", "answer": "No" },
+      { "label": "What sexual orientation do you most closely identify with?", "type": "select", "required": true, "canonical": "orientation", "answer": "Heterosexual" },
+      { "label": "Do you live with a disability (as outlined by the ADA)?", "type": "select", "required": true, "canonical": "disability", "answer": "No, I do not have a disability, or have a history/record of having a disability" },
+      { "label": "Are you a veteran/have you served in the military?", "type": "select", "required": true, "canonical": "veteran", "answer": "No military service" },
+      { "label": "Please select up to 2 ethnicities that you most closely identify with.", "type": "select", "required": true, "canonical": "ethnicity", "answer": "South Asian" },
+      { "label": "By checking this box, I consent to Reddit collecting, storing, and processing my responses to the demographic data surveys above.", "type": "checkbox", "required": true, "canonical": "consent", "answer": "yes" }
+    ],
+    "lever": [
+      { "label": "Which location are you applying for?", "type": "select", "required": false, "canonical": "employer_specific", "answer": null },
+      { "label": "Full name", "type": "text", "required": true, "canonical": "full_name", "answer": "Alex Rivera" },
+      { "label": "Pronouns", "type": "text", "required": false, "canonical": "pronouns", "answer": null },
+      { "label": "Email", "type": "email", "required": true, "canonical": "email", "answer": "alex.rivera@example.com" },
+      { "label": "Phone", "type": "text", "required": true, "canonical": "phone", "answer": "5551234567" },
+      { "label": "Current location", "type": "text", "required": false, "canonical": "city", "answer": "Austin, TX" },
+      { "label": "Current company", "type": "text", "required": true, "canonical": "current_company", "answer": "Acme Corp" },
+      { "label": "LinkedIn URL", "type": "text", "required": false, "canonical": "linkedin", "answer": "https://www.linkedin.com/in/alexrivera-test/" },
+      { "label": "Github URL", "type": "text", "required": false, "canonical": "website", "answer": null },
+      { "label": "Other Website URL", "type": "text", "required": false, "canonical": "website", "answer": null },
+      { "label": "Video Link URL", "type": "text", "required": false, "canonical": "website", "answer": null },
+      { "label": "Are you eligible to work in the United States?", "type": "select", "required": true, "canonical": "work_auth", "answer": "Yes" },
+      { "label": "Are you 18 or over?", "type": "select", "required": true, "canonical": "age_18", "answer": "Yes" },
+      { "label": "Gender", "type": "select", "required": false, "canonical": "gender", "answer": "Male" },
+      { "label": "Race", "type": "radio", "required": false, "canonical": "ethnicity", "answer": "Asian (Not Hispanic or Latino)" },
+      { "label": "Veteran status", "type": "select", "required": false, "canonical": "veteran", "answer": "I am not a protected veteran" },
+      { "label": "Disability status", "type": "select", "required": false, "canonical": "disability", "answer": "No, I do not have a disability and have not had one in the past" },
+      { "label": "Name", "type": "text", "required": false, "canonical": "full_name", "answer": "Alex Rivera" },
+      { "label": "Date", "type": "text", "required": false, "canonical": "employer_specific", "answer": null },
+      { "label": "What is your age range?", "type": "radio", "required": false, "canonical": "employer_specific", "answer": null },
+      { "label": "What gender do you identify as?", "type": "radio", "required": false, "canonical": "gender", "answer": "Male" }
+    ],
+    "ashby": [
+      { "label": "Legal Name", "type": "text", "required": true, "canonical": "full_name", "answer": "Alex Rivera" },
+      { "label": "Email", "type": "email", "required": true, "canonical": "email", "answer": "alex.rivera@example.com" },
+      { "label": "Phone", "type": "tel", "required": true, "canonical": "phone", "answer": "5551234567" },
+      { "label": "Where do you plan on working from (for payroll tax purposes)?", "type": "text", "required": false, "canonical": "city", "answer": "Austin, TX" },
+      { "label": "LinkedIn Profile", "type": "text", "required": true, "canonical": "linkedin", "answer": "https://www.linkedin.com/in/alexrivera-test/" },
+      { "label": "Are you currently based in the San Francisco Bay Area?", "type": "checkbox", "required": false, "canonical": "employer_specific", "answer": "No" },
+      { "label": "This role requires deep relationships within the AI ecosystem. Please briefly describe your experience working with AI-native companies, labs, founders, or investors, and include examples of the types of partnerships, products, investments, or ecosystem relationships you’ve personally led or developed.", "type": "textarea", "required": false, "canonical": "employer_specific", "answer": null }
+    ],
+    "workday": [
+      { "label": "How Did You Hear About Us?", "type": "text", "required": true, "canonical": "source", "answer": "LinkedIn" },
+      { "label": "Have you been employed by Adobe in the past?", "type": "radio", "required": true, "canonical": "employer_specific", "answer": "No" },
+      { "label": "Country", "type": "text", "required": false, "canonical": "country", "answer": "United States" },
+      { "label": "First Name", "type": "text", "required": true, "canonical": "first_name", "answer": "Alex" },
+      { "label": "Last Name", "type": "text", "required": true, "canonical": "last_name", "answer": "Rivera" },
+      { "label": "Address Line 1", "type": "text", "required": false, "canonical": "address", "answer": null },
+      { "label": "Address Line 2", "type": "text", "required": false, "canonical": "address", "answer": null },
+      { "label": "City", "type": "text", "required": false, "canonical": "city", "answer": "Austin" },
+      { "label": "State", "type": "text", "required": false, "canonical": "address", "answer": "Texas" },
+      { "label": "Postal Code", "type": "text", "required": false, "canonical": "address", "answer": null },
+      { "label": "Email", "type": "text", "required": true, "canonical": "email", "answer": "alex.rivera@example.com" },
+      { "label": "Phone Device Type", "type": "text", "required": false, "canonical": "phone_device_type", "answer": "Mobile" },
+      { "label": "Country Phone Code", "type": "text", "required": true, "canonical": "country_phone_code", "answer": "United States +1" },
+      { "label": "Phone Number", "type": "text", "required": true, "canonical": "phone", "answer": "5551234567" },
+      { "label": "Phone Extension", "type": "text", "required": false, "canonical": "phone_extension", "answer": null }
+    ]
+  }
+}

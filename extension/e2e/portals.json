@@ -1,0 +1,26 @@
+{
+  "greenhouse": {
+    "url": "https://job-boards.greenhouse.io/reddit/jobs/8194576",
+    "env": "GH_JOB_URL",
+    "ready": "#first_name, input[aria-label=\"First Name\"]",
+    "note": "Reddit Job Board — form on page"
+  },
+  "lever": {
+    "url": "https://jobs.lever.co/leverdemo/58db3f8e-b108-47d1-9e6e-87a1712497cd/apply",
+    "env": "LEVER_JOB_URL",
+    "ready": "input[name=\"email\"]",
+    "note": "Lever demo — accept cookies if banner blocks fields"
+  },
+  "ashby": {
+    "url": "https://jobs.ashbyhq.com/ramp/cc0af88a-2a19-493d-93cf-c5090f986f1f/application",
+    "env": "ASHBY_JOB_URL",
+    "ready": "#_systemfield_email",
+    "note": "Ramp Ashby application"
+  },
+  "workday": {
+    "url": "https://adobe.wd5.myworkdayjobs.com/en-US/external_experienced/job/San-Jose/Director-of-Engineering--Real-Time-Experience--RTX-_R172776",
+    "env": "WORKDAY_JOB_URL",
+    "ready": "#emailAddress--emailAddress",
+    "note": "Adobe Workday — click Apply → Apply Manually"
+  }
+}
