@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 
 const API_BASE = 'http://localhost:3000/api';
 
@@ -36,6 +36,19 @@ function cleanOptions(label, options) {
 
 function hasAnswer(f) {
   return !!(f?.answer && String(f.answer).trim());
+}
+
+/** Already-filled page values are skipped on Start over / re-scan. */
+function isPageValueComplete(currentValue, field = {}) {
+  const v = String(currentValue ?? '').trim();
+  if (!v) return false;
+  const ph = String(field.placeholder || '').trim();
+  if (ph && ph.toLowerCase() === v.toLowerCase()) return false;
+  // Workday select buttons often read "Select Country" / "Select One" when empty.
+  if (/^(mm\/yyyy|select(\s+\w+){0,3}|choose(\s+\w+){0,3}|loading|n\/?a|-)$/i.test(v)) return false;
+  if (/^select an? option/i.test(v)) return false;
+  if (/^(please\s+)?(select|choose)\b/i.test(v) && v.length <= 40) return false;
+  return true;
 }
 
 /** Country dial before phone — same order a person would fill. */
@@ -257,11 +270,12 @@ function FieldPrompt({
   );
 }
 
+/** Keep in sync with content.js SCRIPT_VERSION so Start over gets scrape fixes. */
+const CONTENT_SCRIPT_VERSION = 'v2025-11-01-rescrape-startover';
+
 async function ensureContentScript(tabId) {
-  // Avoid re-injecting: the content bundle used top-level `const _` (PortalEngine),
-  // so a second inject threw "Identifier '_' has already been declared" (seen on Ashby).
   const alive = await sendMessageSafe(tabId, { action: 'ping' }, 1200);
-  if (alive?.ok) return;
+  if (alive?.ok && alive?.version === CONTENT_SCRIPT_VERSION) return;
 
   try {
     await chrome.scripting.executeScript({
@@ -345,7 +359,7 @@ async function loadOptionsForField(tabId, field) {
   };
 }
 
-export function AutofillSection({ profile, onFillActiveChange }) {
+export function AutofillSection({ profile, activeTabId = null, onFillActiveChange }) {
   const [status, setStatus] = useState('idle');
   const [progressLabel, setProgressLabel] = useState('');
   const [progressIndex, setProgressIndex] = useState(0);
@@ -353,22 +367,28 @@ export function AutofillSection({ profile, onFillActiveChange }) {
   const [currentField, setCurrentField] = useState(null);
   const [fieldValue, setFieldValue] = useState('');
   const [filledCount, setFilledCount] = useState(0);
+  const [skippedFilled, setSkippedFilled] = useState(0);
   const [errorMsg, setErrorMsg] = useState(null);
   const [busy, setBusy] = useState(false);
   const [draftingAi, setDraftingAi] = useState(false);
   const [askAiError, setAskAiError] = useState(null);
 
+  /** Tab this run is bound to (set when Fill / Start over begins). */
   const tabIdRef = useRef(null);
   const abortRef = useRef(false);
+  const runIdRef = useRef(0);
   const pickResolverRef = useRef(null);
   const pageContextRef = useRef({});
+  const statusRef = useRef(status);
+  statusRef.current = status;
 
   const setFillActive = (active) => {
     if (typeof onFillActiveChange === 'function') onFillActiveChange(active);
   };
 
-  const reset = () => {
+  const reset = useCallback((opts = {}) => {
     abortRef.current = true;
+    runIdRef.current += 1;
     if (pickResolverRef.current) {
       pickResolverRef.current(null);
       pickResolverRef.current = null;
@@ -380,13 +400,30 @@ export function AutofillSection({ profile, onFillActiveChange }) {
     setCurrentField(null);
     setFieldValue('');
     setFilledCount(0);
-    setErrorMsg(null);
+    setSkippedFilled(0);
+    setErrorMsg(opts.message || null);
     setBusy(false);
     setDraftingAi(false);
     setAskAiError(null);
     tabIdRef.current = null;
     setFillActive(false);
-  };
+  }, [onFillActiveChange]);
+
+  // Always follow the browser's active tab — never keep scraping tab A after you open tab B.
+  useEffect(() => {
+    if (activeTabId == null) return;
+    const bound = tabIdRef.current;
+    if (bound == null || bound === activeTabId) return;
+
+    const s = statusRef.current;
+    if (s === 'working' || s === 'needs_input') {
+      reset({ message: 'Switched tabs — fill stopped. Click Fill Form on this page.' });
+      return;
+    }
+    if (s === 'done' || s === 'error') {
+      reset();
+    }
+  }, [activeTabId, reset]);
 
   const askHuman = async (tabId, field, suggested = '') => {
     const enriched = await loadOptionsForField(tabId, field);
@@ -481,35 +518,47 @@ export function AutofillSection({ profile, onFillActiveChange }) {
     }
   };
 
-  const handleFillForm = useCallback(async () => {
+  const handleFillForm = useCallback(async (opts = {}) => {
     if (!profile) return;
+    const runId = ++runIdRef.current;
     abortRef.current = false;
     setStatus('working');
     setFillActive(true);
     setErrorMsg(null);
     setFilledCount(0);
+    setSkippedFilled(0);
     setCurrentField(null);
-    setProgressLabel('Reading form…');
+    setAskAiError(null);
+    setDraftingAi(false);
+    setProgressLabel(opts.rescan ? 'Re-scanning form…' : 'Reading form…');
     setProgressIndex(0);
     setProgressTotal(0);
 
+    const stillThisRun = () => !abortRef.current && runIdRef.current === runId;
+
     try {
+      // Always the tab the user is looking at now (not a leftover from a previous fill).
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!tab?.id) {
+      const tabId = tab?.id || null;
+      if (!tabId) {
         throw new Error('No active tab — click the application page, then Fill Form');
       }
-      tabIdRef.current = tab.id;
-      await ensureContentScript(tab.id);
+      tabIdRef.current = tabId;
+      await ensureContentScript(tabId);
+      if (!stillThisRun()) return;
 
-      const scraped = await sendMessageSafe(tab.id, { action: 'scrapeFormFields' }, 120000);
-      if (abortRef.current) return;
+      // Fresh scrape — picks up fields added after the first pass; skips already filled.
+      const scraped = await sendMessageSafe(tabId, { action: 'scrapeFormFields' }, 120000);
+      if (!stillThisRun()) return;
       if (!scraped?.fields?.length) {
         setErrorMsg('No form fields found on this page.');
         setStatus('error');
+        setFillActive(false);
         return;
       }
 
       pageContextRef.current = { url: scraped.url, title: scraped.title };
+      const scrapedComplete = scraped.fields.filter((f) => isPageValueComplete(f.currentValue, f)).length;
 
       setProgressLabel('Matching answers…');
       const response = await fetch(`${API_BASE}/autofill/generate`, {
@@ -521,23 +570,46 @@ export function AutofillSection({ profile, onFillActiveChange }) {
           pageContext: pageContextRef.current,
         }),
       });
+      if (!stillThisRun()) return;
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
         throw new Error(err.error || 'Autofill failed');
       }
 
       const result = await response.json();
-      const queue = [...(result.data.answers || [])].sort(humanFillOrder);
+      const planned = [...(result.data.answers || [])].filter((f) => !f.skip);
+      const queue = planned
+        .filter((f) => !isPageValueComplete(f.currentValue, f))
+        .sort(humanFillOrder);
+      setSkippedFilled(scrapedComplete);
       setProgressTotal(queue.length);
+
+      if (queue.length === 0) {
+        setFilledCount(0);
+        setStatus('done');
+        setProgressLabel(
+          scrapedComplete
+            ? `Skipped ${scrapedComplete} already filled — nothing left to fill`
+            : 'No fillable fields on this form',
+        );
+        setFillActive(false);
+        return;
+      }
 
       let filled = 0;
       for (let i = 0; i < queue.length; i++) {
-        if (abortRef.current) return;
+        if (!stillThisRun()) return;
         const field = queue[i];
         setProgressIndex(i + 1);
         setProgressLabel(field.label);
         setStatus('working');
         setCurrentField(null);
+
+        if (isPageValueComplete(field.currentValue, field)) {
+          setSkippedFilled((n) => n + 1);
+          await sleep(40);
+          continue;
+        }
 
         let answer = hasAnswer(field) ? String(field.answer).trim() : '';
         const allowDial = /country|phone|dial|calling/i.test(field.label || '');
@@ -548,9 +620,9 @@ export function AutofillSection({ profile, onFillActiveChange }) {
         const needsReview = field.bucket === 'ask' || field.source === 'llm';
 
         if (!answer) {
-          const pick = await askHuman(tab.id, field, '');
-          if (abortRef.current || !pick) {
-            if (!abortRef.current) setErrorMsg('Stopped.');
+          const pick = await askHuman(tabId, field, '');
+          if (!stillThisRun() || !pick) {
+            if (stillThisRun()) setErrorMsg('Stopped.');
             break;
           }
           if (pick.kind === 'skip') {
@@ -559,9 +631,9 @@ export function AutofillSection({ profile, onFillActiveChange }) {
           }
           answer = pick.value;
         } else if (needsReview) {
-          const pick = await askHuman(tab.id, field, answer);
-          if (abortRef.current || !pick) {
-            if (!abortRef.current) setErrorMsg('Stopped.');
+          const pick = await askHuman(tabId, field, answer);
+          if (!stillThisRun() || !pick) {
+            if (stillThisRun()) setErrorMsg('Stopped.');
             break;
           }
           if (pick.kind === 'skip') {
@@ -571,19 +643,21 @@ export function AutofillSection({ profile, onFillActiveChange }) {
           answer = pick.value;
         }
 
+        if (!stillThisRun()) return;
+
         const expIdx = Number.isInteger(field.experienceIndex) ? field.experienceIndex : null;
-        let injectResult = await injectOne(tab.id, profile.id, field.label, answer, expIdx);
+        let injectResult = await injectOne(tabId, profile.id, field.label, answer, expIdx);
 
         // Inject missed → open that field's real options and ask.
         if (!injectResult.ok) {
-          const pick = await askHuman(tab.id, { ...field, answer: null }, injectResult.suggested || answer);
-          if (abortRef.current || !pick) break;
+          const pick = await askHuman(tabId, { ...field, answer: null }, injectResult.suggested || answer);
+          if (!stillThisRun() || !pick) break;
           if (pick.kind === 'skip') {
             await sleep(120);
             continue;
           }
           answer = pick.value;
-          injectResult = await injectOne(tab.id, profile.id, field.label, answer, expIdx);
+          injectResult = await injectOne(tabId, profile.id, field.label, answer, expIdx);
           if (!injectResult.ok) {
             setErrorMsg(`Could not set “${field.label.slice(0, 40)}”. Continuing…`);
             await sleep(400);
@@ -597,20 +671,42 @@ export function AutofillSection({ profile, onFillActiveChange }) {
         await sleep(280 + Math.floor(Math.random() * 180));
       }
 
-      if (!abortRef.current) {
+      if (stillThisRun()) {
         setFilledCount(filled);
         setStatus('done');
         setProgressLabel('');
         setFillActive(false);
       }
     } catch (err) {
-      if (!abortRef.current) {
+      if (stillThisRun()) {
         setErrorMsg(err.message || 'Autofill failed');
         setStatus('error');
         setFillActive(false);
       }
     }
   }, [profile]);
+
+  /** Abort current run and re-scrape the active tab (new rows / sections included). */
+  const startOver = useCallback(async () => {
+    abortRef.current = true;
+    runIdRef.current += 1;
+    if (pickResolverRef.current) {
+      pickResolverRef.current(null);
+      pickResolverRef.current = null;
+    }
+    setBusy(false);
+    setDraftingAi(false);
+    setAskAiError(null);
+    setCurrentField(null);
+    setFieldValue('');
+    setErrorMsg(null);
+    setProgressLabel('Re-scanning form…');
+    setStatus('working');
+    // Drop the old tab pin so handleFillForm binds to whatever is active now.
+    tabIdRef.current = null;
+    await sleep(220);
+    await handleFillForm({ rescan: true });
+  }, [handleFillForm]);
 
   if (!profile) return null;
 
@@ -635,6 +731,7 @@ export function AutofillSection({ profile, onFillActiveChange }) {
             <ul className="mt-2 space-y-1 text-[11px] text-slate-500 leading-snug list-disc pl-4">
               <li>One field at a time — this panel stays open while you click the page</li>
               <li>Pauses for your pick — Ask AI, Fill, or Skip</li>
+              <li>Start over anytime; already-filled fields are skipped</li>
               <li>Never clicks Submit</li>
             </ul>
             {errorMsg && <p className="text-xs text-red-400 mt-2">{errorMsg}</p>}
@@ -654,9 +751,19 @@ export function AutofillSection({ profile, onFillActiveChange }) {
               </p>
             )}
             <p className="text-[10px] text-green-400/80 mt-2">{filledCount} filled so far</p>
-            <button type="button" onClick={reset} className="text-xs text-slate-500 mt-3 hover:text-slate-300">
-              Stop
-            </button>
+            {skippedFilled > 0 && (
+              <p className="text-[10px] text-slate-500 mt-0.5">
+                Skipped {skippedFilled} already filled
+              </p>
+            )}
+            <div className="flex gap-3 justify-center mt-3">
+              <button type="button" onClick={startOver} className="text-xs text-indigo-400 hover:text-indigo-300">
+                Start over
+              </button>
+              <button type="button" onClick={reset} className="text-xs text-slate-500 hover:text-slate-300">
+                Stop
+              </button>
+            </div>
           </div>
         )}
 
@@ -665,10 +772,16 @@ export function AutofillSection({ profile, onFillActiveChange }) {
             <div className="flex items-center justify-between gap-2 mb-1.5">
               <p className="text-[11px] text-slate-400">
                 Field {progressIndex} of {progressTotal} · {filledCount} filled
+                {skippedFilled > 0 ? ` · ${skippedFilled} skipped` : ''}
               </p>
-              <button type="button" onClick={reset} className="text-[10px] text-slate-500 hover:text-slate-300">
-                Stop
-              </button>
+              <div className="flex gap-2 shrink-0">
+                <button type="button" onClick={startOver} className="text-[10px] text-indigo-400 hover:text-indigo-300">
+                  Start over
+                </button>
+                <button type="button" onClick={reset} className="text-[10px] text-slate-500 hover:text-slate-300">
+                  Stop
+                </button>
+              </div>
             </div>
             <p className="text-[11px] text-amber-400/95 font-medium mb-2">Your pick for this field</p>
             <FieldPrompt
@@ -692,11 +805,25 @@ export function AutofillSection({ profile, onFillActiveChange }) {
 
         {status === 'done' && (
           <div className="rounded-lg border border-emerald-800/40 bg-emerald-950/20 px-3 py-4 text-center">
-            <p className="text-green-400 font-medium text-sm">{filledCount} fields filled</p>
+            <p className="text-green-400 font-medium text-sm">
+              {filledCount > 0
+                ? `${filledCount} fields filled`
+                : (progressLabel || 'Nothing left to fill')}
+            </p>
+            {skippedFilled > 0 && (
+              <p className="text-[11px] text-slate-500 mt-1">
+                Skipped {skippedFilled} already filled
+              </p>
+            )}
             <p className="text-[11px] text-slate-500 mt-1">Review the page, then submit yourself.</p>
-            <button type="button" onClick={reset} className="text-xs text-indigo-400 mt-3 hover:text-indigo-300">
-              Run again
-            </button>
+            <div className="flex gap-3 justify-center mt-3">
+              <button type="button" onClick={startOver} className="text-xs text-indigo-400 hover:text-indigo-300">
+                Start over
+              </button>
+              <button type="button" onClick={reset} className="text-xs text-slate-500 hover:text-slate-300">
+                Done
+              </button>
+            </div>
           </div>
         )}
       </div>

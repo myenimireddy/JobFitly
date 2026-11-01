@@ -32,7 +32,7 @@ export function Panel() {
   const [profile, setProfile] = useState(null);
   const [loadingText, setLoadingText] = useState('');
   const [backendOnline, setBackendOnline] = useState(false);
-  const [tabInfo, setTabInfo] = useState({ title: '', url: '', host: '' });
+  const [tabInfo, setTabInfo] = useState({ id: null, title: '', url: '', host: '' });
   const [fillActive, setFillActive] = useState(false);
   const { loading, error, uploadResume, checkBackend, clearError } = useApi();
   const version = chrome.runtime.getManifest().version;
@@ -42,6 +42,7 @@ export function Panel() {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (!tab) return;
       setTabInfo({
+        id: tab.id ?? null,
         title: tab.title || '',
         url: tab.url || '',
         host: shortenHost(tab.url || ''),
@@ -173,6 +174,7 @@ export function Panel() {
         {profile && (
           <AutofillSection
             profile={profile}
+            activeTabId={tabInfo.id}
             onFillActiveChange={setFillActive}
           />
         )}

@@ -307,8 +307,10 @@ function isPageValueComplete(currentValue, field = {}) {
   if (!v) return false;
   const ph = String(field.placeholder || '').trim();
   if (ph && normalizeKey(v) === normalizeKey(ph)) return false;
-  if (/^(mm\/yyyy|select(\s+one)?|choose(\s+one)?|loading|n\/?a|-)$/i.test(v)) return false;
+  // Workday select buttons often read "Select Country" / "Select One" when empty.
+  if (/^(mm\/yyyy|select(\s+\w+){0,3}|choose(\s+\w+){0,3}|loading|n\/?a|-)$/i.test(v)) return false;
   if (/^select an? option/i.test(v)) return false;
+  if (/^(please\s+)?(select|choose)\b/i.test(v) && v.length <= 40) return false;
   return true;
 }
 
