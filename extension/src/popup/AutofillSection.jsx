@@ -123,7 +123,7 @@ function canAskAi(field, hasChoices) {
 }
 
 function FieldPrompt({
-  field, value, onSelect, onTyped, onCommitText, onAskAi, busy, draftingAi, askAiError,
+  field, value, onSelect, onTyped, onCommitText, onAskAi, onSkip, busy, draftingAi, askAiError,
 }) {
   const scraped = cleanOptions(field.label, field.options);
   const choices = scraped.length ? scraped : (fallbackChoices(field.label) || []);
@@ -133,6 +133,7 @@ function FieldPrompt({
     ? 'Privacy / consent acknowledgment'
     : field.label;
   const hasText = !!(value && String(value).trim());
+  const disabled = busy || draftingAi;
 
   return (
     <div className="rounded-lg border border-amber-700/40 bg-slate-800/50 px-2.5 py-2">
@@ -153,7 +154,7 @@ function FieldPrompt({
           <div className="flex gap-2">
             <button
               type="button"
-              disabled={busy || draftingAi}
+              disabled={disabled}
               onClick={() => onSelect(choices[0])}
               className="flex-1 py-2 px-3 rounded-lg text-xs font-medium bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-50"
             >
@@ -162,42 +163,64 @@ function FieldPrompt({
             {choices[1] && choices[1] !== choices[0] && (
               <button
                 type="button"
-                disabled={busy || draftingAi}
+                disabled={disabled}
                 onClick={() => onSelect(choices[1])}
                 className="py-2 px-3 rounded-lg text-xs text-slate-300 border border-slate-600/50 hover:bg-slate-700/50 disabled:opacity-50"
               >
                 {choices[1]}
               </button>
             )}
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={onSkip}
+              className="py-2 px-2.5 rounded-lg text-xs text-slate-400 border border-slate-600/40 hover:bg-slate-700/40 disabled:opacity-50"
+            >
+              Skip
+            </button>
           </div>
         ) : (
-          <select
-            value={choices.includes(value) ? value : ''}
-            disabled={busy || draftingAi}
-            onChange={(e) => onSelect(e.target.value)}
-            className="w-full bg-slate-900/80 border border-slate-600/40 rounded px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 disabled:opacity-50"
-          >
-            <option value="">Choose an option</option>
-            {choices.map((opt) => (
-              <option key={opt} value={opt}>{opt}</option>
-            ))}
-          </select>
+          <>
+            <select
+              value={choices.includes(value) ? value : ''}
+              disabled={disabled}
+              onChange={(e) => {
+                if (e.target.value) onSelect(e.target.value);
+              }}
+              className="w-full bg-slate-900/80 border border-slate-600/40 rounded px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 disabled:opacity-50"
+            >
+              <option value="">Choose an option</option>
+              {choices.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+            <div className="flex justify-end mt-1.5">
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={onSkip}
+                className="py-1.5 px-2.5 rounded-lg text-[11px] text-slate-400 border border-slate-600/40 hover:bg-slate-700/40 disabled:opacity-50"
+              >
+                Skip
+              </button>
+            </div>
+          </>
         )
       ) : (
         <>
           <textarea
             rows={showAskAi ? 4 : 2}
             value={value || ''}
-            disabled={busy || draftingAi}
+            disabled={disabled}
             onChange={(e) => onTyped(e.target.value)}
             placeholder={showAskAi ? 'Type an answer, or Ask AI for a draft' : 'Type answer, then Fill'}
             className="w-full bg-slate-900/80 border border-slate-600/40 rounded px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 resize-y min-h-[2.5rem] disabled:opacity-50"
           />
-          <div className="flex gap-2 mt-1.5">
+          <div className="flex gap-1.5 mt-1.5">
             {showAskAi && (
               <button
                 type="button"
-                disabled={busy || draftingAi}
+                disabled={disabled}
                 onClick={onAskAi}
                 className="flex-1 py-1.5 px-2 rounded-lg text-[11px] font-medium border border-indigo-500/50 text-indigo-300 hover:bg-indigo-500/15 disabled:opacity-50"
               >
@@ -206,11 +229,19 @@ function FieldPrompt({
             )}
             <button
               type="button"
-              disabled={busy || draftingAi || !hasText}
+              disabled={disabled || !hasText}
               onClick={() => onCommitText(String(value).trim())}
               className="flex-1 py-1.5 px-2 rounded-lg text-[11px] font-medium bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-40"
             >
               Fill
+            </button>
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={onSkip}
+              className="py-1.5 px-2.5 rounded-lg text-[11px] text-slate-400 border border-slate-600/40 hover:bg-slate-700/40 disabled:opacity-50"
+            >
+              Skip
             </button>
           </div>
           {askAiError && (
@@ -250,8 +281,12 @@ function filledCount(result) {
   return 0;
 }
 
-async function injectOne(tabId, profileId, label, answer) {
-  const payload = [{ label, answer: String(answer).trim() }];
+async function injectOne(tabId, profileId, label, answer, experienceIndex = null) {
+  const payload = [{
+    label,
+    answer: String(answer).trim(),
+    experienceIndex: Number.isInteger(experienceIndex) ? experienceIndex : undefined,
+  }];
   const result = (await sendMessageSafe(tabId, { action: 'injectAutofill', answers: payload })) || {};
   const okLabels = result.okLabels || [];
   const failed = Array.isArray(result.failed) ? result.failed : [];
@@ -262,7 +297,7 @@ async function injectOne(tabId, profileId, label, answer) {
       await fetch(`${API_BASE}/autofill/save-answers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profileId, answers: payload }),
+        body: JSON.stringify({ profileId, answers: [{ label, answer: String(answer).trim() }] }),
       });
     } catch { /* ignore */ }
     return { ok: true, filled: count || 1 };
@@ -310,7 +345,7 @@ async function loadOptionsForField(tabId, field) {
   };
 }
 
-export function AutofillSection({ profile }) {
+export function AutofillSection({ profile, onFillActiveChange }) {
   const [status, setStatus] = useState('idle');
   const [progressLabel, setProgressLabel] = useState('');
   const [progressIndex, setProgressIndex] = useState(0);
@@ -327,6 +362,10 @@ export function AutofillSection({ profile }) {
   const abortRef = useRef(false);
   const pickResolverRef = useRef(null);
   const pageContextRef = useRef({});
+
+  const setFillActive = (active) => {
+    if (typeof onFillActiveChange === 'function') onFillActiveChange(active);
+  };
 
   const reset = () => {
     abortRef.current = true;
@@ -346,6 +385,7 @@ export function AutofillSection({ profile }) {
     setDraftingAi(false);
     setAskAiError(null);
     tabIdRef.current = null;
+    setFillActive(false);
   };
 
   const askHuman = async (tabId, field, suggested = '') => {
@@ -377,13 +417,28 @@ export function AutofillSection({ profile }) {
   const resolveHuman = (value) => {
     const resolve = pickResolverRef.current;
     if (!resolve) return;
+    const trimmed = String(value || '').trim();
+    if (!trimmed) return;
     pickResolverRef.current = null;
     setBusy(true);
     setDraftingAi(false);
     setAskAiError(null);
     setStatus('working');
     setCurrentField(null);
-    resolve(String(value || '').trim() || null);
+    resolve({ kind: 'answer', value: trimmed });
+  };
+
+  /** Skip this field only — continue the fill queue. Stop still aborts the run. */
+  const skipHuman = () => {
+    const resolve = pickResolverRef.current;
+    if (!resolve) return;
+    pickResolverRef.current = null;
+    setBusy(true);
+    setDraftingAi(false);
+    setAskAiError(null);
+    setStatus('working');
+    setCurrentField(null);
+    resolve({ kind: 'skip' });
   };
 
   const handleAskAi = async () => {
@@ -430,6 +485,7 @@ export function AutofillSection({ profile }) {
     if (!profile) return;
     abortRef.current = false;
     setStatus('working');
+    setFillActive(true);
     setErrorMsg(null);
     setFilledCount(0);
     setCurrentField(null);
@@ -439,6 +495,9 @@ export function AutofillSection({ profile }) {
 
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab?.id) {
+        throw new Error('No active tab — click the application page, then Fill Form');
+      }
       tabIdRef.current = tab.id;
       await ensureContentScript(tab.id);
 
@@ -489,26 +548,42 @@ export function AutofillSection({ profile }) {
         const needsReview = field.bucket === 'ask' || field.source === 'llm';
 
         if (!answer) {
-          answer = await askHuman(tab.id, field, '');
-          if (abortRef.current || !answer) {
-            if (!abortRef.current) setErrorMsg('Skipped — stopped fill.');
+          const pick = await askHuman(tab.id, field, '');
+          if (abortRef.current || !pick) {
+            if (!abortRef.current) setErrorMsg('Stopped.');
             break;
           }
+          if (pick.kind === 'skip') {
+            await sleep(120);
+            continue;
+          }
+          answer = pick.value;
         } else if (needsReview) {
-          answer = await askHuman(tab.id, field, answer);
-          if (abortRef.current || !answer) {
-            if (!abortRef.current) setErrorMsg('Skipped — stopped fill.');
+          const pick = await askHuman(tab.id, field, answer);
+          if (abortRef.current || !pick) {
+            if (!abortRef.current) setErrorMsg('Stopped.');
             break;
           }
+          if (pick.kind === 'skip') {
+            await sleep(120);
+            continue;
+          }
+          answer = pick.value;
         }
 
-        let injectResult = await injectOne(tab.id, profile.id, field.label, answer);
+        const expIdx = Number.isInteger(field.experienceIndex) ? field.experienceIndex : null;
+        let injectResult = await injectOne(tab.id, profile.id, field.label, answer, expIdx);
 
         // Inject missed → open that field's real options and ask.
         if (!injectResult.ok) {
-          answer = await askHuman(tab.id, { ...field, answer: null }, injectResult.suggested || answer);
-          if (abortRef.current || !answer) break;
-          injectResult = await injectOne(tab.id, profile.id, field.label, answer);
+          const pick = await askHuman(tab.id, { ...field, answer: null }, injectResult.suggested || answer);
+          if (abortRef.current || !pick) break;
+          if (pick.kind === 'skip') {
+            await sleep(120);
+            continue;
+          }
+          answer = pick.value;
+          injectResult = await injectOne(tab.id, profile.id, field.label, answer, expIdx);
           if (!injectResult.ok) {
             setErrorMsg(`Could not set “${field.label.slice(0, 40)}”. Continuing…`);
             await sleep(400);
@@ -526,93 +601,105 @@ export function AutofillSection({ profile }) {
         setFilledCount(filled);
         setStatus('done');
         setProgressLabel('');
+        setFillActive(false);
       }
     } catch (err) {
       if (!abortRef.current) {
         setErrorMsg(err.message || 'Autofill failed');
         setStatus('error');
+        setFillActive(false);
       }
     }
   }, [profile]);
 
   if (!profile) return null;
 
+  const sessionLive = status === 'working' || status === 'needs_input';
+
   return (
-    <div className="p-4 border-t border-slate-800">
-      <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-        Autofill Application
-      </h2>
+    <div className={`flex flex-col flex-1 min-h-0 ${sessionLive ? 'bg-slate-900' : ''}`}>
+      <div className="p-3 flex-1 min-h-0 overflow-y-auto">
+        <h2 className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">
+          Autofill
+        </h2>
 
-      {(status === 'idle' || status === 'error') && (
-        <>
-          <button
-            type="button"
-            onClick={handleFillForm}
-            className="w-full py-3 px-4 rounded-lg font-medium bg-emerald-600 hover:bg-emerald-500 text-white"
-          >
-            Fill Form
-          </button>
-          <p className="text-xs text-slate-500 text-center mt-2">
-            Fills one field at a time. Pauses only when it needs your pick.
-          </p>
-          {errorMsg && <p className="text-xs text-red-400 text-center mt-2">{errorMsg}</p>}
-        </>
-      )}
+        {(status === 'idle' || status === 'error') && (
+          <>
+            <button
+              type="button"
+              onClick={handleFillForm}
+              className="w-full py-2.5 px-3 rounded-lg font-medium text-sm bg-emerald-600 hover:bg-emerald-500 text-white"
+            >
+              Fill Form
+            </button>
+            <ul className="mt-2 space-y-1 text-[11px] text-slate-500 leading-snug list-disc pl-4">
+              <li>One field at a time — this panel stays open while you click the page</li>
+              <li>Pauses for your pick — Ask AI, Fill, or Skip</li>
+              <li>Never clicks Submit</li>
+            </ul>
+            {errorMsg && <p className="text-xs text-red-400 mt-2">{errorMsg}</p>}
+          </>
+        )}
 
-      {status === 'working' && (
-        <div className="py-3 text-center">
-          <p className="text-xs text-slate-300">
-            {progressTotal
-              ? `Field ${progressIndex} of ${progressTotal}`
-              : 'Working…'}
-          </p>
-          {progressLabel && (
-            <p className="text-[11px] text-slate-500 mt-1 truncate px-2" title={progressLabel}>
-              {progressLabel}
+        {status === 'working' && (
+          <div className="rounded-lg border border-slate-700/60 bg-slate-800/40 px-3 py-3 text-center">
+            <p className="text-xs text-slate-200">
+              {progressTotal
+                ? `Field ${progressIndex} of ${progressTotal}`
+                : 'Working…'}
             </p>
-          )}
-          <p className="text-[10px] text-green-400/80 mt-2">{filledCount} filled so far</p>
-          <button type="button" onClick={reset} className="text-xs text-slate-500 mt-3">
-            Stop
-          </button>
-        </div>
-      )}
+            {progressLabel && (
+              <p className="text-[11px] text-slate-500 mt-1 line-clamp-2 px-1" title={progressLabel}>
+                {progressLabel}
+              </p>
+            )}
+            <p className="text-[10px] text-green-400/80 mt-2">{filledCount} filled so far</p>
+            <button type="button" onClick={reset} className="text-xs text-slate-500 mt-3 hover:text-slate-300">
+              Stop
+            </button>
+          </div>
+        )}
 
-      {status === 'needs_input' && currentField && (
-        <div>
-          <p className="text-[11px] text-slate-400 mb-1">
-            Field {progressIndex} of {progressTotal} · {filledCount} filled
-          </p>
-          <p className="text-[11px] text-amber-400 font-medium mb-2">Your pick for this field</p>
-          <FieldPrompt
-            field={currentField}
-            value={fieldValue}
-            busy={busy}
-            draftingAi={draftingAi}
-            askAiError={askAiError}
-            onSelect={(v) => resolveHuman(v)}
-            onTyped={(v) => {
-              setFieldValue(v);
-              if (askAiError) setAskAiError(null);
-            }}
-            onCommitText={(v) => resolveHuman(v)}
-            onAskAi={handleAskAi}
-          />
-          {errorMsg && <p className="text-xs text-red-400 text-center mt-2">{errorMsg}</p>}
-          <button type="button" onClick={reset} className="w-full py-1.5 text-xs text-slate-500 mt-2">
-            Stop
-          </button>
-        </div>
-      )}
+        {status === 'needs_input' && currentField && (
+          <div className="sticky top-0 z-[1]">
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <p className="text-[11px] text-slate-400">
+                Field {progressIndex} of {progressTotal} · {filledCount} filled
+              </p>
+              <button type="button" onClick={reset} className="text-[10px] text-slate-500 hover:text-slate-300">
+                Stop
+              </button>
+            </div>
+            <p className="text-[11px] text-amber-400/95 font-medium mb-2">Your pick for this field</p>
+            <FieldPrompt
+              field={currentField}
+              value={fieldValue}
+              busy={busy}
+              draftingAi={draftingAi}
+              askAiError={askAiError}
+              onSelect={(v) => resolveHuman(v)}
+              onTyped={(v) => {
+                setFieldValue(v);
+                if (askAiError) setAskAiError(null);
+              }}
+              onCommitText={(v) => resolveHuman(v)}
+              onAskAi={handleAskAi}
+              onSkip={skipHuman}
+            />
+            {errorMsg && <p className="text-xs text-red-400 mt-2">{errorMsg}</p>}
+          </div>
+        )}
 
-      {status === 'done' && (
-        <div className="text-center py-3">
-          <p className="text-green-400 font-medium text-sm">✓ {filledCount} fields filled</p>
-          <button type="button" onClick={reset} className="text-xs text-indigo-400 mt-2">
-            Run again
-          </button>
-        </div>
-      )}
+        {status === 'done' && (
+          <div className="rounded-lg border border-emerald-800/40 bg-emerald-950/20 px-3 py-4 text-center">
+            <p className="text-green-400 font-medium text-sm">{filledCount} fields filled</p>
+            <p className="text-[11px] text-slate-500 mt-1">Review the page, then submit yourself.</p>
+            <button type="button" onClick={reset} className="text-xs text-indigo-400 mt-3 hover:text-indigo-300">
+              Run again
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

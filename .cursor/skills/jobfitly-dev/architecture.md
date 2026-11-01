@@ -39,8 +39,10 @@ parsedData: {
 | `content.js` | Message bridge → `PortalEngine` |
 | `portalEngine.js` | Detect portal, scrape, inject, generic fallback, `scrapeOptionsForLabel` |
 | `portals/greenhouseJobBoard.js` | GH boards React-Select / consent / dial-safe options |
-| `popup/AutofillSection.jsx` | Generate → ordered one-by-one fill → HITL ask UI |
-| `popup/Popup.jsx` | Shell / profile selection |
+| `sidepanel/` | Primary UI — Chrome Side Panel (stays open during HITL) |
+| `popup/AutofillSection.jsx` | Generate → ordered one-by-one fill → HITL ask / Ask AI |
+| `popup/Popup.jsx` | Re-exports Panel for legacy imports |
+| `background.js` | `sidePanel.setPanelBehavior({ openPanelOnActionClick: true })` |
 
 Legacy `parsers/` directory may be empty; **live path is PortalEngine + portals/**.
 

@@ -68,20 +68,33 @@ function labelsMatch(a, b) {
   return labelMatchScore(a, b) > 0;
 }
 
-/** Pick the single best-labeled field for an answer label (exact preferred). */
-function pickBestField(fields, answerLabel, getLabel) {
-  let best = null;
+/**
+ * Pick the best-labeled field. When several share the top score (Work Experience 1/2/…),
+ * `occurrence` selects the Nth match in DOM order (0-based).
+ */
+function pickBestField(fields, answerLabel, getLabel, occurrence = 0) {
   let bestScore = 0;
+  const scored = [];
   for (const field of fields) {
     const fLabel = getLabel(field);
     if (!fLabel) continue;
     const score = labelMatchScore(fLabel, answerLabel);
-    if (score > bestScore) {
-      bestScore = score;
-      best = field;
-    }
+    if (score <= 0) continue;
+    scored.push({ field, score });
+    if (score > bestScore) bestScore = score;
   }
-  return bestScore > 0 ? best : null;
+  if (!bestScore) return null;
+  const top = scored.filter((s) => s.score === bestScore).map((s) => s.field);
+  const idx = Math.max(0, Number(occurrence) || 0);
+  return top[idx] || top[0] || null;
+}
+
+/** Work Experience block field — used to assign experienceIndex while scraping. */
+function isWorkExperienceLabel(label) {
+  const n = String(label || '').toLowerCase().replace(/[*:]+$/g, '').trim();
+  if (/desired|preferred|target|sought/.test(n)) return false;
+  return /^(job title|company|employer|role description|job description|from|to|i currently work here|currently work here)$/.test(n)
+    || n === 'location';
 }
 
 /** Shared option match — exact / whole-token only. No substring-of-compound matches
@@ -519,23 +532,49 @@ PortalEngine.register('workday', {
 
   scrape(doc) {
     const fields = [];
-    const seen = new Set();
+    const seenAuto = new Set();
+    // Do NOT dedupe by label — Work Experience 2+ reuses "Job Title", "Company", …
     const allFields = doc.querySelectorAll('[data-automation-id^="formField-"], [data-automation-id="radioGroup"]');
     console.log(`[PortalEngine] Workday: found ${allFields.length} fields`);
 
+    let experienceIndex = -1;
+    let inWorkExpBlock = false;
+
+    const pushField = (base) => {
+      const label = base.label;
+      const n = String(label || '').toLowerCase().replace(/[*:]+$/g, '').trim();
+      let expIdx = null;
+
+      if (/^job title$/.test(n) && !/desired|preferred|target|sought/.test(String(label || '').toLowerCase())) {
+        experienceIndex += 1;
+        inWorkExpBlock = true;
+        expIdx = experienceIndex;
+      } else if (inWorkExpBlock && isWorkExperienceLabel(label)) {
+        expIdx = experienceIndex;
+      } else if (inWorkExpBlock) {
+        // Hit a non–work-experience field → close the block.
+        inWorkExpBlock = false;
+      }
+
+      fields.push({
+        ...base,
+        experienceIndex: expIdx,
+        section: expIdx != null ? 'work_experience' : null,
+      });
+    };
+
     allFields.forEach((field) => {
       const autoId = field.dataset.automationId || '';
-      if (seen.has(autoId.toLowerCase())) return;
+      if (autoId && seenAuto.has(autoId.toLowerCase())) return;
+      if (autoId) seenAuto.add(autoId.toLowerCase());
 
       const labelEl = field.querySelector('[data-automation-id="formLabel"], label, .css-1ud5i8o');
       const label = labelEl ? cleanLabel(labelEl) : null;
       if (!label) return;
-      if (seen.has(norm(label))) return;
 
       const radios = field.querySelectorAll('input[type="radio"]');
       if (radios.length > 0) {
-        seen.add(norm(label));
-        fields.push({
+        pushField({
           label, type: 'radio', name: radios[0]?.name || null, id: null,
           required: !!field.querySelector('[aria-required="true"]'),
           options: Array.from(radios).map(r => {
@@ -547,10 +586,20 @@ PortalEngine.register('workday', {
         return;
       }
 
+      const checkbox = field.querySelector('input[type="checkbox"]');
+      if (checkbox) {
+        pushField({
+          label, type: 'checkbox', name: checkbox.name || null, id: checkbox.id || null,
+          required: checkbox.required || checkbox.getAttribute('aria-required') === 'true',
+          options: null, placeholder: null,
+          currentValue: checkbox.checked ? 'Yes' : '',
+        });
+        return;
+      }
+
       const selectWidget = field.querySelector('[data-automation-id="selectWidget"]');
       if (selectWidget) {
-        seen.add(norm(label));
-        fields.push({
+        pushField({
           label, type: 'select', name: null, id: selectWidget.id || null,
           required: selectWidget.getAttribute('aria-required') === 'true',
           options: Array.from(doc.querySelectorAll('[data-automation-id="promptOption"]')).map(o => o.innerText.trim()).filter(Boolean),
@@ -561,8 +610,7 @@ PortalEngine.register('workday', {
 
       const select = field.querySelector('select');
       if (select) {
-        seen.add(norm(label));
-        fields.push({
+        pushField({
           label, type: 'select', name: select.name || null, id: select.id || null,
           required: select.required,
           options: Array.from(select.options).map(o => o.text.trim()).filter(t => t && !/^(select|choose)/i.test(t)),
@@ -573,8 +621,7 @@ PortalEngine.register('workday', {
 
       const textarea = field.querySelector('textarea');
       if (textarea) {
-        seen.add(norm(label));
-        fields.push({
+        pushField({
           label, type: 'textarea', name: textarea.name || null, id: textarea.id || null,
           required: textarea.required || textarea.getAttribute('aria-required') === 'true',
           options: null, placeholder: textarea.placeholder || null, currentValue: textarea.value || null,
@@ -582,10 +629,9 @@ PortalEngine.register('workday', {
         return;
       }
 
-      const input = field.querySelector('input:not([type="hidden"]):not([type="file"]):not([type="submit"]):not([type="button"])');
+      const input = field.querySelector('input:not([type="hidden"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="checkbox"]):not([type="radio"])');
       if (input) {
-        seen.add(norm(label));
-        fields.push({
+        pushField({
           label, type: input.type || 'text', name: input.name || null, id: input.id || null,
           required: input.required || input.getAttribute('aria-required') === 'true',
           options: null, placeholder: input.placeholder || null, currentValue: input.value || null,
@@ -654,9 +700,23 @@ PortalEngine.register('workday', {
     };
     const ordered = [...answers].filter((a) => a.answer).sort((a, b) => rankAnswer(a) - rankAnswer(b));
 
-    for (const { label, answer } of ordered) {
-      const field = pickBestField(formFields, label, getLabel);
+    for (const item of ordered) {
+      const { label, answer } = item;
+      const occurrence = Number.isInteger(item.experienceIndex) ? item.experienceIndex : 0;
+      const field = pickBestField(formFields, label, getLabel, occurrence);
       if (!field) continue;
+
+      const checkbox = field.querySelector('input[type="checkbox"]');
+      if (checkbox) {
+        const wantOn = /^(yes|true|1|on|checked)$/i.test(String(answer).trim());
+        if (checkbox.checked !== wantOn) {
+          checkbox.click();
+          checkbox.checked = wantOn;
+          checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        filled++;
+        continue;
+      }
 
       const radios = field.querySelectorAll('input[type="radio"]');
       if (radios.length > 0) {

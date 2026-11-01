@@ -301,6 +301,82 @@ function looksLikeDialCodeAnswer(text) {
   return false;
 }
 
+/** True when the live form already has a real value (skip — only fill empties). */
+function isPageValueComplete(currentValue, field = {}) {
+  const v = String(currentValue ?? '').trim();
+  if (!v) return false;
+  const ph = String(field.placeholder || '').trim();
+  if (ph && normalizeKey(v) === normalizeKey(ph)) return false;
+  if (/^(mm\/yyyy|select(\s+one)?|choose(\s+one)?|loading|n\/?a|-)$/i.test(v)) return false;
+  if (/^select an? option/i.test(v)) return false;
+  return true;
+}
+
+function toMonthYear(raw) {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  if (/^present|current|now$/i.test(s)) return null;
+  const iso = s.match(/^(\d{4})-(\d{1,2})/);
+  if (iso) return `${iso[2].padStart(2, '0')}/${iso[1]}`;
+  const my = s.match(/^(\d{1,2})\s*[\/\-]\s*(\d{4})$/);
+  if (my) return `${my[1].padStart(2, '0')}/${my[2]}`;
+  const monYear = s.match(/^([A-Za-z]{3,9})\s+(\d{4})$/);
+  if (monYear) {
+    const months = 'jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec';
+    const idx = months.split('|').findIndex((m) => monYear[1].toLowerCase().startsWith(m));
+    if (idx >= 0) return `${String(idx + 1).padStart(2, '0')}/${monYear[2]}`;
+  }
+  if (/^\d{4}$/.test(s)) return `01/${s}`;
+  return s;
+}
+
+/**
+ * Work Experience N field → resume slot key, or null if not a WE field.
+ * Requires experienceIndex from scrape (do not guess from bare Job Title alone).
+ */
+function workExperienceSlot(label) {
+  const n = normalizeKey(label);
+  if (/desired|preferred|target|sought|applying for/.test(n)) return null;
+  if (n === 'job title' || n === 'role title' || n === 'title') return 'title';
+  if (n === 'company' || n === 'employer' || n === 'company name' || n === 'employer name') return 'company';
+  if (n === 'location') return 'location';
+  if (n === 'role description' || n === 'job description' || n === 'position description') return 'description';
+  if (n === 'from') return 'from';
+  if (n === 'to') return 'to';
+  if (/currently work here|currently employed|i currently work/.test(n)) return 'current';
+  return null;
+}
+
+function answerFromWorkExperience(job, slot) {
+  if (!job || !slot) return null;
+  if (slot === 'title') return job.title || null;
+  if (slot === 'company') {
+    const raw = job.company || '';
+    return raw.split(',')[0].trim() || null;
+  }
+  if (slot === 'location') return job.location || null;
+  if (slot === 'from') return toMonthYear(job.startDate);
+  if (slot === 'to') {
+    const end = job.endDate || '';
+    if (!end || /^present|current|now$/i.test(String(end).trim())) return null;
+    return toMonthYear(end);
+  }
+  if (slot === 'current') {
+    const end = job.endDate || '';
+    return (!end || /^present|current|now$/i.test(String(end).trim())) ? 'Yes' : 'No';
+  }
+  if (slot === 'description') {
+    const bullets = Array.isArray(job.achievements)
+      ? job.achievements.map((a) => String(a || '').trim()).filter(Boolean)
+      : [];
+    if (bullets.length) {
+      return bullets.map((b) => (b.startsWith('•') || b.startsWith('-') ? b : `• ${b}`)).join('\n');
+    }
+    return job.description || null;
+  }
+  return null;
+}
+
 function snapToOption(answer, options) {
   if (!answer) return null;
   const list = (options || []).map(String).filter(Boolean);
@@ -388,12 +464,60 @@ function planField(field, profile, extraAnswers) {
 
   const options = fieldOptions(field);
   const intent = classifyIntent(label, options);
+  const expIdx = Number.isInteger(field.experienceIndex) ? field.experienceIndex : null;
+  const meta = {
+    experienceIndex: expIdx,
+    section: field.section || null,
+    currentValue: field.currentValue ?? null,
+  };
+
+  // Already filled on the page → skip (only work empty fields).
+  if (isPageValueComplete(field.currentValue, field)) {
+    return {
+      label, answer: null, missing: false, bucket: 'known', source: 'page', skip: true,
+      intent: intent.id, type: field.type || 'text', options, needsLLM: false, ...meta,
+    };
+  }
+
+  // Work Experience N → workExperience[N] from resume parse.
+  const weSlot = workExperienceSlot(label);
+  if (weSlot && expIdx != null) {
+    const jobs = profile.workExperience || [];
+    if (expIdx >= jobs.length) {
+      // Extra empty form row — leave blank (user can Skip / ignore).
+      return {
+        label, answer: null, missing: false, bucket: 'known', source: null, skip: true,
+        intent: 'work_experience', type: field.type || 'text', options, needsLLM: false, ...meta,
+      };
+    }
+    const raw = answerFromWorkExperience(jobs[expIdx], weSlot);
+    if (!raw) {
+      // e.g. To when currently employed — leave empty, don't Ask AI.
+      return {
+        label, answer: null, missing: false, bucket: 'known', source: 'profile', skip: true,
+        intent: 'work_experience', type: field.type || 'text', options, needsLLM: false, ...meta,
+      };
+    }
+    return {
+      label,
+      answer: snapToOption(raw, options),
+      missing: false,
+      bucket: 'known',
+      source: 'profile',
+      skip: false,
+      intent: 'work_experience',
+      type: field.type || 'text',
+      options,
+      needsLLM: false,
+      ...meta,
+    };
+  }
 
   // Never dump the phone number into an extension box.
   if (intent.id === 'phone_extension') {
     return {
       label, answer: null, missing: false, bucket: 'known', source: null, skip: true,
-      intent: intent.id, type: field.type || 'text', options,
+      intent: intent.id, type: field.type || 'text', options, needsLLM: false, ...meta,
     };
   }
 
@@ -417,6 +541,8 @@ function planField(field, profile, extraAnswers) {
         intent: intent.id,
         type: field.type || (options ? 'select' : 'text'),
         options,
+        needsLLM: false,
+        ...meta,
       };
     }
   }
@@ -427,13 +553,13 @@ function planField(field, profile, extraAnswers) {
   if (snapped && (allowsDial || !looksLikeDialCodeAnswer(snapped))) {
     return {
       label, answer: snapped, missing: false, bucket: 'known', source: 'profile', skip: false,
-      intent: intent.id, type: field.type || 'text', options,
+      intent: intent.id, type: field.type || 'text', options, needsLLM: false, ...meta,
     };
   }
 
   const base = {
     label, answer: null, missing: true, bucket: 'missing', source: null, skip: false,
-    intent: intent.id, type: field.type || 'text', options,
+    intent: intent.id, type: field.type || 'text', options, ...meta,
   };
   if (intent.policy === 'human') {
     return { ...base, needsLLM: false };
@@ -484,4 +610,8 @@ module.exports = {
   snapToOption,
   applyLlmAnswer,
   parseLlmList,
+  isPageValueComplete,
+  workExperienceSlot,
+  answerFromWorkExperience,
+  toMonthYear,
 };

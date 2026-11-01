@@ -16,6 +16,14 @@ Treat these as invariants when changing fill code.
 - Persist with `storageKeyForAnswer` so dial answers key as `phone_country`, not `country`.
 - `lookupStored` must not reuse dial strings for mailing `Country`.
 
+## Work Experience (Workday)
+
+- Scrape must **not** dedupe by label — WE 2+ reuses `Job Title` / `Company`.
+- Tag `experienceIndex` (0-based) from DOM order; planner fills `workExperience[i]`.
+- Extra form rows with no resume job → `skip` (leave empty). Extra resume jobs → user clicks Add Another.
+- Fields that already have a real `currentValue` → skip (only fill empties).
+- Bare `Job Title` without `experienceIndex` is not assumed to be job[0] (avoids “Desired job title” collisions).
+
 ## Phone shape
 
 - Structured object: `applicationProfile.phone` only.

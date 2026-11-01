@@ -32,6 +32,47 @@ describe('classifyIntent', () => {
     expect(classifyIntent('Desired job title').id).toBe('open');
     expect(classifyIntent('Current job title').id).toBe('current_title');
   });
+
+  test('Work Experience N fills from workExperience[N]; extra rows skip', () => {
+    const { workExperienceSlot, planField: plan } = require('./logic');
+    expect(workExperienceSlot('Job Title*')).toBe('title');
+    expect(workExperienceSlot('Desired job title')).toBeNull();
+
+    const p = {
+      personalInfo: { fullName: 'Ada Lovelace', email: 'ada@example.com' },
+      workExperience: [
+        {
+          title: 'Staff Engineer',
+          company: 'Acme, Remote',
+          location: 'Austin, TX',
+          startDate: '2021-03',
+          endDate: 'Present',
+          achievements: ['Shipped API'],
+        },
+        {
+          title: 'Engineer',
+          company: 'Beta Inc',
+          location: 'Dallas, TX',
+          startDate: '2018-01',
+          endDate: '2021-02',
+          achievements: ['Built billing'],
+        },
+      ],
+    };
+
+    expect(plan({ label: 'Job Title*', experienceIndex: 0 }, p, {}).answer).toBe('Staff Engineer');
+    expect(plan({ label: 'Company*', experienceIndex: 0 }, p, {}).answer).toBe('Acme');
+    expect(plan({ label: 'Job Title*', experienceIndex: 1 }, p, {}).answer).toBe('Engineer');
+    expect(plan({ label: 'From*', experienceIndex: 1 }, p, {}).answer).toBe('01/2018');
+    expect(plan({ label: 'To*', experienceIndex: 1 }, p, {}).answer).toBe('02/2021');
+    expect(plan({ label: 'I currently work here', experienceIndex: 0 }, p, {}).answer).toBe('Yes');
+    // Extra empty Work Experience 3 on the form — skip, do not Ask AI
+    expect(plan({ label: 'Job Title*', experienceIndex: 2 }, p, {}).skip).toBe(true);
+    // Already complete on page — skip
+    expect(plan({ label: 'Job Title*', experienceIndex: 0, currentValue: 'Staff Engineer' }, p, {}).skip).toBe(true);
+    // Bare Job Title without index stays open (not assumed to be WE[0])
+    expect(plan({ label: 'Job Title*' }, p, {}).needsLLM).toBe(true);
+  });
 });
 
 describe('bay area / prior employer facts', () => {
