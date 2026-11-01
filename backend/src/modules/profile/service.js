@@ -1,11 +1,50 @@
 const pdfParse = require('pdf-parse');
 const { prisma } = require('../../lib/prisma');
-const { parseResumeWithLLM } = require('../../lib/llmResumeParser');
-const { parseResumeWithRegex } = require('../../lib/fallback');
+const { parseResumeWithLLM, normalizeParsedResume, computeConfidence, isCompleteParse } = require('../../lib/llmResumeParser');
+const {
+  draftApplicationProfile,
+  getCaptureQuestionnaire,
+  mergeApplicationProfile,
+} = require('./applicationFields');
 
 /**
  * Serialize a profile row from DB (parsedData is stored as JSON string)
  */
+function foldText(text) {
+  return (text || '').replace(/\s+/g, ' ').trim();
+}
+
+function emailsIn(text) {
+  return [...new Set((foldText(text).toLowerCase().match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/g) || []))];
+}
+
+function parsedOf(row) {
+  const data = typeof row.parsedData === 'string' ? JSON.parse(row.parsedData) : row.parsedData;
+  return data || {};
+}
+
+function isLlmParse(row) {
+  return parsedOf(row)._parseAudit?.parseMethod === 'llm';
+}
+
+function sameResume(rawText, row) {
+  const a = foldText(rawText);
+  const b = foldText(row.rawText);
+  if (!a || !b) return false;
+  if (a === b) return true;
+  if (a.slice(0, 100) === b.slice(0, 100) && Math.abs(a.length - b.length) < 800) return true;
+  const emails = emailsIn(rawText);
+  const bLower = b.toLowerCase();
+  return emails.length > 0
+    && emails.every((email) => bLower.includes(email))
+    && Math.abs(a.length - b.length) < 2000;
+}
+
+function findReusableProfile(rawText, rows) {
+  const matches = rows.filter((row) => sameResume(rawText, row));
+  return matches.find(isLlmParse) || matches[0] || null;
+}
+
 function serializeProfile(profile) {
   return {
     ...profile,
@@ -27,30 +66,67 @@ class ProfileService {
   async uploadAndParse(pdfBuffer) {
     const rawText = await this.extractTextFromPDF(pdfBuffer);
 
+    const recent = await prisma.profile.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    const existing = findReusableProfile(rawText, recent);
+    if (existing && isCompleteParse(parsedOf(existing))) {
+      const parsed = parsedOf(existing);
+      const before = JSON.stringify(parsed);
+      normalizeParsedResume(parsed);
+      if (JSON.stringify(parsed) !== before) {
+        parsed.parseConfidence = computeConfidence(parsed);
+        await prisma.profile.update({
+          where: { id: existing.id },
+          data: { parsedData: JSON.stringify(parsed) },
+        });
+        existing.parsedData = JSON.stringify(parsed);
+        console.log(`[profile] Reusing complete profile ${existing.id} — skipping Ollama`);
+      } else {
+        console.log(`[profile] Reusing complete profile ${existing.id} — skipping Ollama`);
+      }
+      return serializeProfile(existing);
+    }
+    if (existing) {
+      console.log(`[profile] ${existing.id} is incomplete — re-parsing full resume`);
+    }
+
     console.log('\n━━━ [profile] PDF TEXT EXTRACTED ━━━');
     console.log(`  chars : ${rawText.length}`);
     console.log(`  lines : ${rawText.split('\n').filter(l => l.trim()).length}`);
     console.log('  first 300 chars:');
     console.log(' ', rawText.slice(0, 300).replace(/\n/g, '\n  '));
 
-    // ── Try LLM parser first, fall back to regex if LLM is unavailable ─────────
-    let parsedData = await parseResumeWithLLM(rawText);
-    let parseMethod = 'llm';
+    const parsedData = await parseResumeWithLLM(rawText);
 
-    if (!parsedData) {
-      console.warn('[profile] LLM unavailable — falling back to regex parser');
-      parsedData = parseResumeWithRegex(rawText);
-      parseMethod = 'regex';
+    if (!parsedData || !isCompleteParse(parsedData)) {
+      const again = recent.find((row) => sameResume(rawText, row) && isCompleteParse(parsedOf(row)));
+      if (again) {
+        console.warn(`[profile] Parse incomplete — keeping earlier complete profile ${again.id}`);
+        return serializeProfile(again);
+      }
+      throw new Error('Resume parse did not finish. Keep Ollama running and upload again — wait up to 10 minutes.');
     }
 
     // Attach parse metadata for frontend to surface
     parsedData._parseAudit = {
-      parseMethod,
-      needsReview: parseMethod === 'regex',
-      message: parseMethod === 'llm'
-        ? 'Resume parsed by AI — please review and correct any mistakes'
-        : 'AI unavailable — parsed with basic regex, accuracy may be lower. Please review carefully.',
+      parseMethod: 'llm',
+      needsReview: false,
+      message: 'Resume parsed by AI — please review and correct any mistakes',
     };
+    // Seed applicationProfile draft so post-parse capture has resume defaults
+    // (phone as {country, countryCode, nationalNumber}).
+    parsedData.applicationProfile = draftApplicationProfile(parsedData);
+
+    if (existing) {
+      const profile = await prisma.profile.update({
+        where: { id: existing.id },
+        data: { rawText, parsedData: JSON.stringify(parsedData) },
+      });
+      console.log(`[profile] Updated ${profile.id} with full parse`);
+      return serializeProfile(profile);
+    }
 
     const profile = await prisma.profile.create({
       data: {
@@ -74,6 +150,16 @@ class ProfileService {
     return serializeProfile(profile);
   }
 
+  async getLatest() {
+    const rows = await prisma.profile.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+    if (rows.length === 0) return null;
+    const complete = rows.find((row) => isCompleteParse(parsedOf(row)));
+    return serializeProfile(complete || rows[0]);
+  }
+
   /**
    * Update the parsedData for a profile (user edits)
    * @param {string} id - Profile CUID
@@ -86,6 +172,58 @@ class ProfileService {
       data: { parsedData: JSON.stringify(parsedData) },
     });
     console.log(`[profile] Updated parsedData → id: ${id}`);
+    return serializeProfile(profile);
+  }
+
+  /**
+   * Questionnaire for ATS fields not reliably on the resume.
+   */
+  async getApplicationCapture(id) {
+    const profile = await this.getById(id);
+    if (!profile) return null;
+    return getCaptureQuestionnaire(profile.parsedData || {});
+  }
+
+  /**
+   * Save consolidated applicationProfile answers after resume parse.
+   */
+  async saveApplicationProfile(id, applicationUpdates) {
+    const profile = await this.getById(id);
+    if (!profile) {
+      const err = new Error('Profile not found');
+      err.statusCode = 404;
+      throw err;
+    }
+    const merged = mergeApplicationProfile(profile.parsedData || {}, applicationUpdates || {});
+    return this.updateParsedData(id, merged);
+  }
+
+  /**
+   * Create / upsert a named test profile (e.g. "Test Customer 1") with full capture.
+   */
+  async upsertNamedProfile({ displayName, rawText, parsedData }) {
+    const recent = await prisma.profile.findMany({ orderBy: { createdAt: 'desc' }, take: 50 });
+    const existing = recent.find((row) => {
+      const data = parsedOf(row);
+      return data.applicationProfile?.displayName === displayName;
+    });
+
+    const withCapture = mergeApplicationProfile(parsedData, {
+      ...(parsedData.applicationProfile || {}),
+      displayName,
+      captureComplete: true,
+      capturedAt: new Date().toISOString(),
+    });
+
+    if (existing) {
+      return this.updateParsedData(existing.id, withCapture);
+    }
+    const profile = await prisma.profile.create({
+      data: {
+        rawText: rawText || `Synthetic profile: ${displayName}`,
+        parsedData: JSON.stringify(withCapture),
+      },
+    });
     return serializeProfile(profile);
   }
 

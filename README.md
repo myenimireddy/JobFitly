@@ -155,36 +155,51 @@ The autofill engine includes **portal-specific parsers** for accurate field dete
 
 ```
 JobFitly/
-├── backend/                    # Node.js / Express API
+├── .cursor/skills/jobfitly-dev/  # Cursor agent skill for feature work
+├── backend/                      # Node.js / Express API
 │   ├── src/
 │   │   ├── modules/
-│   │   │   ├── profile/        # Resume upload & parsing
-│   │   │   ├── job/            # Job posting management
-│   │   │   ├── match/          # Job fit scoring (no LLM needed)
-│   │   │   ├── autofill/       # Autofill — LLM prompt + answer cache
-│   │   │   └── documents/      # Document storage
-│   │   ├── llm/                # LLM provider abstraction (Ollama / Groq)
-│   │   └── lib/                # Shared utilities
-│   ├── prisma/                 # SQLite schema
-│   └── .env.example            # Environment template
+│   │   │   ├── profile/          # Resume upload, parse, application catalog
+│   │   │   ├── job/              # Job posting management
+│   │   │   ├── match/            # Job fit scoring (no LLM needed)
+│   │   │   ├── autofill/         # Planner (intents/buckets) + LLM drafts
+│   │   │   └── documents/        # Document storage
+│   │   ├── llm/                  # LLM provider abstraction (Ollama / Groq)
+│   │   └── lib/                  # PII sanitizer, resume parser, shared utils
+│   ├── prisma/                   # SQLite schema
+│   └── .env.example
 │
-├── frontend/                   # React web app (Vite + Tailwind)
-│   └── src/
+├── frontend/                     # React web app (Vite + Tailwind)
+│   └── src/                      # Upload, profile editor, application capture
 │
-├── extension/                  # Chrome Extension (MV3, Vite)
-│   └── src/
-│       ├── parsers/            # Portal-specific autofill parsers
-│       │   ├── lever.js        # jobs.lever.co
-│       │   ├── greenhouse.js   # boards.greenhouse.io
-│       │   ├── workday.js      # *.myworkdayjobs.com
-│       │   ├── linkedin.js     # linkedin.com/jobs
-│       │   └── generic.js      # Fallback — any standard HTML form
-│       ├── content.js          # Page scraper + form injector
-│       ├── background.js       # Service worker / orchestrator
-│       └── popup/              # React popup UI
+├── extension/                    # Chrome Extension (MV3, Vite)
+│   ├── src/
+│   │   ├── portalEngine.js       # Portal detect / scrape / inject + generic
+│   │   ├── portals/              # Portal-specific modules (e.g. GH Job Board)
+│   │   ├── content.js            # Message bridge → PortalEngine
+│   │   ├── background.js         # Service worker
+│   │   └── popup/                # React popup (HITL one-by-one fill)
+│   ├── tests/                    # Offline jsdom mocks (fast)
+│   └── e2e/                      # Playwright live ATS (portals.json)
 │
-└── Makefile                    # Common commands
+└── Makefile
 ```
+
+---
+
+## Agent skills (AI-assisted development)
+
+For Cursor (and compatible) agents working on this repo, use the project skill:
+
+**[`.cursor/skills/jobfitly-dev/`](.cursor/skills/jobfitly-dev/)**
+
+| File | Purpose |
+|------|---------|
+| [`SKILL.md`](.cursor/skills/jobfitly-dev/SKILL.md) | Pipeline, where-to-edit map, hard rules, feature checklist |
+| [`architecture.md`](.cursor/skills/jobfitly-dev/architecture.md) | Module map, profile JSON shape, messaging |
+| [`autofill-pitfalls.md`](.cursor/skills/jobfitly-dev/autofill-pitfalls.md) | Greenhouse/React-Select, dial vs country, phone shape, HITL |
+
+Agents should load this skill when changing autofill, portals, application profile fields, resume parsing, or extension fill UX — so new work follows the same intent/bucket model and avoids known ATS footguns.
 
 ---
 
@@ -297,19 +312,16 @@ If the LLM is offline, parsing falls back to a regex engine — the banner switc
 
 ---
 
-## Adding a New Portal Parser
+## Adding a New Portal
 
-1. Create `extension/src/parsers/myportal.js` implementing:
-   ```js
-   export const MyPortalParser = {
-     name: 'MyPortal',
-     matches(hostname) { return hostname.includes('myportal.com'); },
-     scrapeFields(doc) { /* return FieldDescriptor[] */ },
-     injectAnswer(label, answer, doc) { /* return boolean */ },
-   };
-   ```
-2. Import and add it to the `PARSERS` array in `extension/src/parsers/index.js` (before `GenericParser`)
-3. Run `make build-extension` and reload in `chrome://extensions`
+Prefer a module under `extension/src/portals/` (or a `PortalEngine.register(...)` block in `portalEngine.js`) that implements scrape + inject for that ATS. Greenhouse Job Board / React-Select belongs in `portals/greenhouseJobBoard.js`.
+
+1. Detect hostname / DOM fingerprint and return labeled fields (with types/options when cheap and safe).
+2. Inject by label without destroying React-managed menus (no bulk option scrape; no `.remove()` on select menus).
+3. Add an offline mock under `extension/tests/mocks/` when possible; put live URLs in `extension/e2e/portals.json`.
+4. Run `make build-extension` and reload unpacked `extension/dist` on `chrome://extensions`.
+
+See [`.cursor/skills/jobfitly-dev/`](.cursor/skills/jobfitly-dev/) for the full agent checklist.
 
 ---
 

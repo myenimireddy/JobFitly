@@ -11,6 +11,8 @@
 
 const LLMFactory = require('../llm/factory');
 
+const PARSE_TIMEOUT_MS = 10 * 60 * 1000;
+
 const SYSTEM_PROMPT = `You are an expert resume parser. Extract structured information from the raw resume text provided.
 
 === PRIVACY RULES (MANDATORY — follow without exception) ===
@@ -77,6 +79,9 @@ Required JSON structure:
 
 === EXTRACTION RULES ===
 - Extract ALL work experience entries, not just recent ones.
+- Put school under education[] only. Never use educationalQualifications.
+- Current job endDate must be "Present", not null.
+- Per-job tech list goes in workExperience[].skills, not environments.
 - Skills must be individual items — never comma-separated strings inside one element.
 - If a section is absent from the resume, use [] for arrays or null for strings.
 - Do not invent, assume, or hallucinate any information not explicitly present in the text.
@@ -121,6 +126,29 @@ Examples:
  * @param {string} rawText - Plain text extracted from the PDF
  * @returns {Promise<Object|null>} Parsed data object, or null if LLM unavailable/failed
  */
+function coerceArrays(parsed) {
+  parsed.skills          = toStringArray(parsed.skills);
+  parsed.certifications  = toStringArray(parsed.certifications);
+  parsed.languages       = toStringArray(parsed.languages);
+  parsed.achievements    = toStringArray(parsed.achievements);
+  parsed.volunteer       = toStringArray(parsed.volunteer);
+  parsed.publications    = toStringArray(parsed.publications);
+  parsed.workExperience  = Array.isArray(parsed.workExperience) ? parsed.workExperience : [];
+  parsed.education       = Array.isArray(parsed.education) ? parsed.education : [];
+  parsed.projects        = Array.isArray(parsed.projects) ? parsed.projects : [];
+}
+
+function isCompleteParse(parsed) {
+  if (!parsed?.personalInfo?.fullName) return false;
+  const jobs = (parsed.workExperience || []).filter((j) => j && (j.title || j.company));
+  const titled = jobs.filter((j) => j.title && j.company);
+  const bullets = jobs.filter((j) => Array.isArray(j.achievements) && j.achievements.length > 0);
+  // One titled job is enough (early-career / single-role resumes).
+  if (titled.length < 1) return false;
+  if (jobs.length >= 3 && bullets.length === 0) return false;
+  return true;
+}
+
 async function parseResumeWithLLM(rawText) {
   let llm;
   try {
@@ -130,50 +158,91 @@ async function parseResumeWithLLM(rawText) {
     return null;
   }
 
-  const userPrompt = `Parse the following resume text into the required JSON structure:\n\n${rawText.slice(0, 12000)}`;
-
   try {
-    const raw = await llm.extract(SYSTEM_PROMPT, userPrompt);
-
-    // Strip markdown code fences if present
-    const clean = raw.trim()
-      .replace(/^```(?:json)?\s*/i, '')
-      .replace(/\s*```$/, '')
-      .trim();
-
-    const parsed = JSON.parse(clean);
-
-    // Normalise arrays to ensure correct types
-    parsed.skills          = toStringArray(parsed.skills);
-    parsed.certifications  = toStringArray(parsed.certifications);
-    parsed.languages       = toStringArray(parsed.languages);
-    parsed.achievements    = toStringArray(parsed.achievements);
-    parsed.volunteer       = toStringArray(parsed.volunteer);
-    parsed.publications    = toStringArray(parsed.publications);
-    parsed.workExperience  = Array.isArray(parsed.workExperience) ? parsed.workExperience : [];
-    parsed.education       = Array.isArray(parsed.education) ? parsed.education : [];
-    parsed.projects        = Array.isArray(parsed.projects) ? parsed.projects : [];
-
-    // If LLM didn't return parseConfidence, compute a basic one ourselves
-    if (!parsed.parseConfidence || typeof parsed.parseConfidence.score !== 'number') {
-      parsed.parseConfidence = computeConfidence(parsed);
+    async function onePass() {
+      const raw = await llm.extract(
+        SYSTEM_PROMPT,
+        `Parse this entire resume into the JSON structure. Include every job (title AND company), every bullet, school, and skill.\n\n${String(rawText).slice(0, 12000)}`,
+        PARSE_TIMEOUT_MS,
+      );
+      const parsed = JSON.parse(
+        String(raw).trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim(),
+      );
+      coerceArrays(parsed);
+      normalizeParsedResume(parsed);
+      parsed.parseConfidence = parsed.parseConfidence && typeof parsed.parseConfidence.score === 'number'
+        ? parsed.parseConfidence
+        : computeConfidence(parsed);
+      return parsed;
     }
 
+    let parsed = await onePass();
     console.log('\n━━━ [llmParser] PARSED OUTPUT ━━━');
     console.log('  personalInfo :', JSON.stringify(parsed.personalInfo));
     console.log(`  skills       : [${parsed.skills.length}]`, parsed.skills.slice(0, 8));
     console.log(`  workExp      : ${parsed.workExperience.length} entries`);
     console.log(`  education    : ${parsed.education.length} entries`);
-    console.log(`  projects     : ${parsed.projects.length} entries`);
-    console.log(`  certifications: ${parsed.certifications.length}`);
     console.log(`  parseConfidence: ${parsed.parseConfidence.score}% — ${parsed.parseConfidence.note}`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
+    if (!isCompleteParse(parsed)) {
+      console.warn('[llmParser] First pass incomplete — running full parse again');
+      const retry = await onePass();
+      if (isCompleteParse(retry) || (retry.workExperience || []).length >= (parsed.workExperience || []).length) {
+        parsed = retry;
+      }
+    }
+    if (!isCompleteParse(parsed)) return null;
     return parsed;
   } catch (err) {
     console.error(`[llmParser] Failed to parse LLM response: ${err.message}`);
     return null;
   }
+}
+
+/**
+ * Fix common model drift so we always store the designed shape.
+ */
+function normalizeParsedResume(parsed) {
+  if ((!parsed.education || parsed.education.length === 0) && parsed.educationalQualifications) {
+    const e = parsed.educationalQualifications;
+    parsed.education = Array.isArray(e)
+      ? e
+      : [{
+          degree: e.degree || null,
+          school: e.university || e.school || null,
+          field: e.field || null,
+          startDate: e.startDate || null,
+          endDate: e.endDate || e.graduationDate || null,
+          gpa: e.gpa || null,
+        }];
+  }
+  delete parsed.educationalQualifications;
+
+  parsed.education = (parsed.education || []).map((e) => ({
+    degree: e.degree || null,
+    school: e.school || e.university || null,
+    field: e.field || null,
+    startDate: e.startDate || null,
+    endDate: e.endDate || e.graduationDate || null,
+    gpa: e.gpa || null,
+  }));
+
+  parsed.workExperience = (parsed.workExperience || []).map((w, i) => {
+    const skills = toStringArray(w.skills && w.skills.length ? w.skills : w.environments);
+    let endDate = w.endDate;
+    if (!endDate && i === 0 && w.startDate) endDate = 'Present';
+    return {
+      title: w.title || null,
+      company: w.company || null,
+      startDate: w.startDate || null,
+      endDate: endDate || null,
+      location: w.location || null,
+      achievements: toStringArray(w.achievements),
+      description: w.description || null,
+      skills,
+    };
+  });
 }
 
 function toStringArray(val) {
@@ -212,4 +281,4 @@ function computeConfidence(parsed) {
   return { score, note };
 }
 
-module.exports = { parseResumeWithLLM, computeConfidence };
+module.exports = { parseResumeWithLLM, computeConfidence, normalizeParsedResume, isCompleteParse };

@@ -4,15 +4,17 @@ import { SkillChip } from './SkillChip';
 import { SkeletonLoader } from './SkeletonLoader';
 import { ErrorBanner } from './ErrorBanner';
 import { ProfileEditor } from './ProfileEditor';
+import { ApplicationProfileCapture } from './ApplicationProfileCapture';
 
 /**
  * ProfileUpload component - Section 1: Resume upload and profile display
  */
 export function ProfileUpload() {
-  const { profile, loading, error, uploadResume, clearProfile, deleteProfile, clearError } = useApp();
+  const { profile, loading, error, uploadResume, clearProfile, deleteProfile, clearError, setProfile } = useApp();
   const [isDragOver, setIsDragOver] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showCapture, setShowCapture] = useState(false);
   const [progress, setProgress] = useState(0);
   const progressRef = useRef(null);
 
@@ -49,6 +51,11 @@ export function ProfileUpload() {
   const education = parsedData.education || [];
   const audit = parsedData._parseAudit || null;
   const confidence = parsedData.parseConfidence || null;
+  const captureComplete = !!parsedData.applicationProfile?.captureComplete;
+
+  useEffect(() => {
+    if (profile?.id && !captureComplete) setShowCapture(true);
+  }, [profile?.id, captureComplete]);
 
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
@@ -126,7 +133,7 @@ export function ProfileUpload() {
                 />
               </div>
               <p className="text-xs text-slate-500 mt-3 text-center">
-                First run may take 30–60 s while the model loads into memory.
+                First parse can take 5–10 minutes. Keep this tab open until it finishes.
               </p>
             </div>
           ) : (
@@ -231,6 +238,32 @@ export function ProfileUpload() {
               </div>
 
               {showEditor && <ProfileEditor onClose={() => setShowEditor(false)} />}
+
+              {(showCapture || !captureComplete) && profile?.id && (
+                <ApplicationProfileCapture
+                  profileId={profile.id}
+                  onSaved={(updated) => {
+                    setProfile(updated);
+                    if (updated?.parsedData?.applicationProfile?.captureComplete) {
+                      setShowCapture(false);
+                    }
+                  }}
+                  onSkip={() => setShowCapture(false)}
+                />
+              )}
+
+              {captureComplete && !showCapture && (
+                <div className="mb-4 flex items-center justify-between rounded-lg border border-green-800/30 bg-green-900/20 px-3 py-2">
+                  <p className="text-xs text-green-300">Application profile complete — autofill can use portal fields.</p>
+                  <button
+                    type="button"
+                    onClick={() => setShowCapture(true)}
+                    className="text-xs text-indigo-300 hover:text-indigo-200 underline"
+                  >
+                    Edit
+                  </button>
+                </div>
+              )}
 
               {/* Parse confidence + method banner */}
               {audit && (

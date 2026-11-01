@@ -16,7 +16,7 @@ Copy the list that matches this PR. Every box must be done before merge.
 - [ ] Dead `backend/src/app.js` and unused popup.js gone
 - [ ] Makefile does not mention Docker/Postgres unless those files exist
 - [ ] `node scripts/check-stack.js` passes
-- [ ] `node extension/tests/e2e-runner.js` scrapes/injects mock portals
+- [ ] `npm test` in extension scrapes/injects mock portals
 
 ### #8 Remove match/docs from the extension
 - [ ] Popup has profile + autofill only

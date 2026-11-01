@@ -1,95 +1,31 @@
-# E2E Testing for JobFitly Extension
+# Offline portal tests
 
-## Quick Start
+Fast checks against **mock HTML** — no network, no Playwright browsers required for `npm test`.
 
-### 1. Manual Browser Test (Fastest)
-Open any job application page, open DevTools console, and paste:
-```javascript
-// Copy contents of manual-test.js and paste
+```
+tests/
+  mocks/           # static portal HTML
+  mock-runner.js   # jsdom scrape + inject
+  offline/         # Playwright against local fixtures
+  manual-test.js   # paste into DevTools on a real page
 ```
 
-This checks:
-- ✅ Portal detection working
-- ✅ Field scraping
-- ✅ Blur listeners attached
-- ✅ Profile ID exists
-- ✅ Backend connectivity
-
-### 2. Mock Portal Pages
-Open these files in browser to test specific portals:
+## Commands
 
 ```bash
-# Workday
-open tests/mock-workday.html
-
-# Ashby
-open tests/mock-ashby.html
-
-# Lever
-open tests/mock-lever.html
-
-# Greenhouse
-open tests/mock-greenhouse.html
+cd extension
+npm test                 # mock-runner (jsdom)
+npm run test:offline     # greenhouse fixture inject (Playwright, no live sites)
 ```
 
-Each page auto-runs tests and shows results.
+## Mock pages
 
-### 3. Automated Test Runner
-```bash
-cd extension/tests
-node e2e-runner.js
-```
+Open in a browser if you want to poke at markup:
 
-## Current Status
+- `mocks/greenhouse.html`
+- `mocks/lever.html`
+- `mocks/ashby.html`
+- `mocks/workday.html`
+- `mocks/reddit-greenhouse.html` (React-Select Job Board fixture)
 
-| Portal | Scraping | Injection | Blur Save | Indicator |
-|--------|----------|-----------|-----------|-----------|
-| Workday | ✅ | ⚠️ (text only) | ✅ | ✅ |
-| Ashby | ✅ | ✅ | ✅ | ✅ |
-| Lever | ✅ | ✅ | ✅ | ✅ |
-| Greenhouse | ✅ | ✅ | ✅ | ✅ |
-
-Legend:
-- ✅ Working
-- ⚠️ Partial (see notes)
-- ❌ Broken
-
-## Known Issues
-
-### Workday Injection
-**Problem:** Dropdown injection triggers API errors
-**Solution:** Skip dropdowns, use blur capture instead
-
-### Save Indicator Not Showing
-**Problem:** Indicator flashes once then disappears
-**Solution:** Check indicator CSS animation reset
-
-## Debugging Tips
-
-1. **Extension not loading:**
-   - Go to `chrome://extensions`
-   - Enable Developer Mode
-   - Click "Reload" on JobFitly extension
-   - Check for red errors
-
-2. **Content script errors:**
-   - Open job page
-   - DevTools > Console
-   - Look for `[JobFitly]` or `[PortalEngine]` logs
-
-3. **Backend not saving:**
-   - Check `localhost:3000/api/health`
-   - Verify `extraAnswers` in profile
-   - Check backend console for errors
-
-## Writing New Tests
-
-Add to `e2e-runner.js`:
-```javascript
-myportal: {
-  url: 'file://' + __dirname + '/mock-myportal.html',
-  expectedFields: 5,
-  fieldsToTest: ['name', 'email'],
-  complexFields: ['country'] // Fields to skip
-}
-```
+Live ATS URLs and Playwright e2e live under [`../e2e`](../e2e/).

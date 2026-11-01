@@ -1,9 +1,16 @@
 /**
  * One scrape + inject engine for job application pages.
- * Used by the content script and by tests.
+ * Portal-specific quirks live under ./portals/ (e.g. Greenhouse Job Board React-Select).
+ * genericInject stays portal-agnostic: native inputs, <select>, radio, checkbox.
  */
 
-// ── Utilities ─────────────────────────────────────────────────────────────────
+import {
+  isGreenhouseJobBoard,
+  injectGreenhouseJobBoard,
+  scrapeReactSelectOptions,
+} from './portals/greenhouseJobBoard.js';
+
+// ── Shared utilities ──────────────────────────────────────────────────────────
 
 function norm(s) {
   return (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -13,7 +20,11 @@ function cleanLabel(el) {
   if (!el) return '';
   const clone = el.cloneNode(true);
   clone.querySelectorAll('span.required, span[aria-hidden], svg, button').forEach(c => c.remove());
-  return (clone.textContent || clone.innerText || '').trim().replace(/\s+/g, ' ').replace(/[*:]+$/, '').trim();
+  return (clone.textContent || clone.innerText || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .replace(/[*:✱＊]+$/g, '')
+    .trim();
 }
 
 function setNativeValue(el, value) {
@@ -24,9 +35,189 @@ function setNativeValue(el, value) {
   el.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
+function labelTokens(s) {
+  return String(s || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+}
+
+/**
+ * Score label similarity. Exact wins. Token subset allowed with a penalty for
+ * extra tokens so "Country" does not steal "Country Phone Code".
+ */
+function labelMatchScore(a, b) {
+  const na = norm(a);
+  const nb = norm(b);
+  if (!na || !nb) return 0;
+  if (na === nb) return 10000 + na.length;
+  if (Math.min(na.length, nb.length) <= 3) return 0;
+  const ta = labelTokens(a);
+  const tb = labelTokens(b);
+  if (!ta.length || !tb.length) return 0;
+  const aInB = ta.every((t) => tb.includes(t));
+  const bInA = tb.every((t) => ta.includes(t));
+  if (aInB || bInA) {
+    const shared = Math.min(ta.length, tb.length);
+    const extra = Math.abs(ta.length - tb.length);
+    return shared * 100 - extra * 80;
+  }
+  const ratio = Math.min(na.length, nb.length) / Math.max(na.length, nb.length);
+  if (ratio >= 0.85 && (na.includes(nb) || nb.includes(na))) return Math.floor(ratio * 100);
+  return 0;
+}
+
 function labelsMatch(a, b) {
-  const na = norm(a), nb = norm(b);
-  return na === nb || na.includes(nb) || nb.includes(na);
+  return labelMatchScore(a, b) > 0;
+}
+
+/** Pick the single best-labeled field for an answer label (exact preferred). */
+function pickBestField(fields, answerLabel, getLabel) {
+  let best = null;
+  let bestScore = 0;
+  for (const field of fields) {
+    const fLabel = getLabel(field);
+    if (!fLabel) continue;
+    const score = labelMatchScore(fLabel, answerLabel);
+    if (score > bestScore) {
+      bestScore = score;
+      best = field;
+    }
+  }
+  return bestScore > 0 ? best : null;
+}
+
+/** Shared option match — exact / whole-token only. No substring-of-compound matches
+ *  (e.g. "Asian (Not Hispanic or Latino)" must NOT hit "Hispanic or Latino"). */
+function optionMatch(answer, optionText) {
+  const a = norm(answer);
+  const o = norm(optionText);
+  if (!a || !o) return false;
+  if (a === o) return true;
+  const answerTokens = labelTokens(answer);
+  const optionTokens = labelTokens(optionText);
+  if (!answerTokens.length || !optionTokens.length) return false;
+  if (answerTokens.length === 1 && optionTokens.includes(answerTokens[0])) return true;
+  if (optionTokens.length === 1 && answerTokens.includes(optionTokens[0])) return true;
+  const meaningful = (t) => t.length > 2 && !['the', 'and', 'or', 'for', 'not', 'nor'].includes(t);
+  const at = answerTokens.filter(meaningful);
+  const ot = optionTokens.filter(meaningful);
+  if (!at.length || !ot.length) return false;
+  // Same meaningful token set
+  if (at.length === ot.length && at.every((t) => ot.includes(t))) return true;
+  // Answer tokens all present in option (answer is more specific subset wording)
+  if (at.length >= 2 && at.every((t) => ot.includes(t))) return true;
+  return false;
+}
+
+function optionMatchScore(answer, optionText) {
+  if (!optionMatch(answer, optionText)) return 0;
+  const a = norm(answer);
+  const o = norm(optionText);
+  if (a === o) return 1000;
+  const at = labelTokens(answer);
+  const ot = labelTokens(optionText);
+  if (at.length === ot.length) return 800;
+  return 100 + Math.min(at.length, ot.length) * 10 - Math.abs(at.length - ot.length);
+}
+
+function pickSelectOption(select, answer) {
+  let best = null;
+  let bestScore = 0;
+  for (const opt of select.options || []) {
+    const text = (opt.text || opt.label || '').trim();
+    const score = Math.max(optionMatchScore(answer, text), optionMatchScore(answer, opt.value));
+    if (score > bestScore) {
+      bestScore = score;
+      best = opt;
+    }
+  }
+  return best;
+}
+
+function pickBestChoice(inputs, answer, textOf) {
+  let best = null;
+  let bestScore = 0;
+  for (const input of inputs) {
+    const text = textOf(input);
+    const score = Math.max(optionMatchScore(answer, text), optionMatchScore(answer, input.value));
+    if (score > bestScore) {
+      bestScore = score;
+      best = input;
+    }
+  }
+  return best;
+}
+
+function optionTexts(select) {
+  return Array.from(select.options || [])
+    .map((o) => (o.text || o.label || '').trim())
+    .filter((t) => t && !/^(select|choose|please select|--)/i.test(t));
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isDummyRequired(el) {
+  return el.getAttribute('aria-hidden') === 'true' && el.tabIndex === -1;
+}
+
+function isReactSelectInput(el) {
+  return el.getAttribute('role') === 'combobox' || !!el.closest('.select__control');
+}
+
+function normalizeInjectAnswer(label, answer) {
+  let a = String(answer || '').trim();
+  if (!a) return a;
+  if (/company|employer/i.test(label)) a = a.split(',')[0].trim();
+  if (/^phone$|phone\b|mobile|cell/i.test(label) && !/country/i.test(label)) {
+    const digits = a.replace(/\D/g, '');
+    if (digits.length < 10) return a;
+    if (digits.length === 11 && digits.startsWith('1')) return digits.slice(1);
+    return digits.slice(-10);
+  }
+  return a;
+}
+
+function collectOptions(doc, el) {
+  if (!el) return null;
+  if (el.tagName === 'SELECT') {
+    const texts = optionTexts(el);
+    return texts.length ? texts : null;
+  }
+  const root = el.closest('div, li, fieldset, tr, label, [class*="field"], [class*="question"]') || el.parentElement;
+  if (!root) return null;
+  const select = root.querySelector('select');
+  if (select) {
+    const texts = optionTexts(select);
+    if (texts.length) return texts;
+  }
+  const radios = root.querySelectorAll('input[type="radio"]');
+  if (radios.length >= 2) {
+    const texts = Array.from(radios).map((r) => fieldLabel(doc, r) || r.value).filter(Boolean);
+    if (texts.length) return texts;
+  }
+  const boxes = root.querySelectorAll('input[type="checkbox"]');
+  if (boxes.length >= 2) {
+    const texts = Array.from(boxes).map((r) => fieldLabel(doc, r) || r.value).filter(Boolean);
+    if (texts.length) return texts;
+  }
+  // Do NOT read floating [role=option] here — open React-Select menus leak options
+  // into unrelated fields. Combobox options come from scrapeReactSelectOptions only.
+  return null;
+}
+
+function fieldLabel(doc, el) {
+  if (!el) return '';
+  if (el.id) {
+    const labelEl = doc.querySelector(`label[for="${el.id}"]`);
+    if (labelEl) return (labelEl.textContent || labelEl.innerText || '').trim();
+  }
+  const closest = el.closest('label');
+  if (closest) {
+    const clone = closest.cloneNode(true);
+    clone.querySelectorAll('input, textarea, select').forEach((c) => c.remove());
+    return (clone.textContent || clone.innerText || '').trim();
+  }
+  return el.placeholder || el.getAttribute('aria-label') || el.name || el.id || '';
 }
 
 function isSubmitControl(el) {
@@ -63,113 +254,236 @@ const PortalEngine = {
     return null;
   },
 
-  scrape(portalName = null) {
-    const { doc } = page();
-    const name = portalName || this.detect();
-    if (!name || !this.portals[name]) {
-      console.log('[PortalEngine] No portal detected, using generic scraper');
-      return this.genericScrape();
-    }
-    const handler = this.portals[name];
-    if (handler.scrape) {
-      try {
-        const fields = handler.scrape(doc);
-        console.log(`[PortalEngine] ${name} scraped ${fields.length} fields`);
-        if (fields.length === 0) {
-          console.log(`[PortalEngine] ${name} returned 0, falling back to generic`);
-          return this.genericScrape();
-        }
-        return fields;
-      } catch (err) {
-        console.error(`[PortalEngine] ${name} scrape error:`, err);
-        return this.genericScrape();
+  async scrape(portalName = null) {
+    const win = typeof window !== 'undefined' ? window : null;
+    const sx = win?.scrollX ?? 0;
+    const sy = win?.scrollY ?? 0;
+    const prevFocus = typeof document !== 'undefined' ? document.activeElement : null;
+    try {
+      const { doc } = page();
+      const name = portalName || this.detect();
+      if (!name || !this.portals[name]) {
+        console.log('[PortalEngine] No portal detected, using generic scraper');
+        return await this.genericScrape();
       }
+      const handler = this.portals[name];
+      if (handler.scrape) {
+        try {
+          const fields = await handler.scrape(doc);
+          console.log(`[PortalEngine] ${name} scraped ${fields.length} fields`);
+          if (fields.length === 0) {
+            console.log(`[PortalEngine] ${name} returned 0, falling back to generic`);
+            return await this.genericScrape();
+          }
+          return fields;
+        } catch (err) {
+          console.error(`[PortalEngine] ${name} scrape error:`, err);
+          return await this.genericScrape();
+        }
+      }
+      return await this.genericScrape();
+    } finally {
+      // Scan must not move the page — restore scroll/focus after any open menus.
+      try {
+        if (prevFocus && typeof prevFocus.blur === 'function') prevFocus.blur();
+        win?.scrollTo?.(sx, sy);
+      } catch { /* ignore */ }
     }
-    return this.genericScrape();
   },
 
-  inject(answers, portalName = null) {
+  /**
+   * Open one React-Select (by label) and return its option texts for HITL.
+   * Only used for Remaining fields — not during bulk scrape.
+   */
+  async scrapeOptionsForLabel(label) {
+    const { doc } = page();
+    if (!label || !isGreenhouseJobBoard(doc)) return null;
+    // Phone number itself has no React-Select options — opening anything here
+    // re-opens the Country dial next to the tel input.
+    if (/^phone$|phone\b|mobile|cell|telephone/i.test(label)
+      && !/country|dial|device|extension|type/i.test(label)) {
+      return null;
+    }
+    const inputs = [...doc.querySelectorAll(
+      'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="file"]), textarea, select',
+    )];
+    let best = null;
+    let bestScore = 0;
+    const want = norm(label);
+    for (const el of inputs) {
+      if (el.closest('.iti') && el.type !== 'tel') continue;
+      if (!isReactSelectInput(el) && el.tagName !== 'SELECT') continue;
+      const l = fieldLabel(doc, el) || el.getAttribute('aria-label') || '';
+      let score = labelMatchScore(l, label);
+      const nl = norm(l);
+      // Long EEO questions: match on distinctive phrase overlap.
+      if (score <= 0 && want.length > 12 && nl.length > 12) {
+        if (nl.includes(want) || want.includes(nl)) score = 5000;
+        else if (/orientation/.test(want) && /orientation/.test(nl)) score = 4000;
+        else if (/gender/.test(want) && /gender/.test(nl)) score = 4000;
+        else if (/ethnic/.test(want) && /ethnic|race/.test(nl)) score = 4000;
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        best = el;
+      }
+    }
+    if (!best || bestScore <= 0) return null;
+    if (best.tagName === 'SELECT') return optionTexts(best);
+    return scrapeReactSelectOptions(doc, best);
+  },
+
+  async inject(answers, portalName = null) {
     const { doc } = page();
     const name = portalName || this.detect();
     let filled = 0;
+    let skipGeneric = false;
+    let failed = [];
+    let okLabels = [];
     if (name && this.portals[name] && this.portals[name].inject) {
       try {
-        filled = this.portals[name].inject(doc, answers);
-        console.log(`[PortalEngine] ${name} filled ${filled} fields`);
+        const result = await this.portals[name].inject(doc, answers);
+        if (result && typeof result === 'object') {
+          filled = result.filled || 0;
+          skipGeneric = !!result.skipGeneric;
+          failed = Array.isArray(result.failed) ? [...result.failed] : [];
+          okLabels = Array.isArray(result.okLabels) ? [...result.okLabels] : [];
+          // Portals that only return a count: treat uncounted answers as failed so UI can ask.
+          if (!result.okLabels && !result.failed && Array.isArray(answers) && answers.length) {
+            const answered = answers.filter((a) => a.label && a.answer);
+            if (filled < answered.length) {
+              failed = answered.slice(filled).map((a) => ({
+                label: a.label,
+                answer: String(a.answer),
+              }));
+            } else {
+              okLabels = answered.map((a) => a.label);
+            }
+          }
+        } else {
+          filled = result || 0;
+        }
+        console.log(`[PortalEngine] ${name} filled ${filled} fields${skipGeneric ? ' (skip generic)' : ''}${failed.length ? `, ${failed.length} failed` : ''}`);
       } catch (err) {
         console.error(`[PortalEngine] ${name} inject error:`, err);
       }
     }
-    const genericFilled = this.genericInject(answers);
-    console.log(`[PortalEngine] generic pass filled ${genericFilled} additional fields`);
-    return filled + genericFilled;
+    if (!skipGeneric) {
+      const genericFilled = await this.genericInject(answers);
+      console.log(`[PortalEngine] generic pass filled ${genericFilled} additional fields`);
+      filled += genericFilled;
+    }
+    return { filled, okLabels, failed };
   },
 
-  genericScrape() {
+  async genericScrape() {
     const { doc } = page();
     const fields = [];
     const seen = new Set();
     const inputs = doc.querySelectorAll(
-      'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]):not([type="image"]), textarea, select'
+      'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]):not([type="image"]):not([type="search"]), textarea, select'
     );
-    inputs.forEach((el) => {
-      if (el.style && el.style.display === 'none') return;
-      let label = '';
-      if (el.id) {
-        const labelEl = doc.querySelector(`label[for="${el.id}"]`);
-        if (labelEl) label = (labelEl.textContent || labelEl.innerText || '').trim();
+    const radioGroups = new Map();
+    const list = [...inputs];
+    for (const el of list) {
+      if (el.closest('.iti') && el.type !== 'tel' && !el.classList.contains('iti__tel-input')) continue;
+      const hidden = el.style && el.style.display === 'none';
+      if (hidden && el.tagName !== 'SELECT') continue;
+      if ((el.type || '').toLowerCase() === 'radio') {
+        const group = el.name || `radio-${el.id || fields.length}`;
+        if (!radioGroups.has(group)) radioGroups.set(group, []);
+        radioGroups.get(group).push(el);
+        continue;
       }
-      if (!label) {
-        const closest = el.closest('label');
-        if (closest) {
-          const clone = closest.cloneNode(true);
-          clone.querySelectorAll('input, textarea, select').forEach(c => c.remove());
-          label = (clone.textContent || clone.innerText || '').trim();
-        }
-      }
-      if (!label) {
-        label = el.placeholder || el.getAttribute('aria-label') || el.name || el.id || '';
-      }
+      let label = fieldLabel(doc, el);
       const key = `${label}::${el.type || el.tagName}`;
-      if (seen.has(key) || !label) return;
+      if (seen.has(key) || !label) continue;
       seen.add(key);
+      const type = el.tagName === 'SELECT' ? 'select' : (isReactSelectInput(el) ? 'select' : (el.type || 'text'));
+      // Native <select>/radio/checkbox options only. Never open React-Select menus
+      // during bulk scrape — that leaked Country dial codes into EEO fields.
+      const options = collectOptions(doc, el);
       fields.push({
         id: el.id || null,
         name: el.name || null,
-        type: el.tagName === 'SELECT' ? 'select' : (el.type || 'text'),
+        type,
         label: label.replace(/\s+/g, ' ').slice(0, 120),
         placeholder: el.placeholder || null,
         required: el.required || el.getAttribute('aria-required') === 'true',
         currentValue: el.value || null,
-        options: el.tagName === 'SELECT'
-          ? Array.from(el.options).map(o => o.text.trim()).filter(Boolean)
-          : null,
+        options: options && options.length ? options : null,
+      });
+    }
+    radioGroups.forEach((els) => {
+      const first = els[0];
+      let label = '';
+      const legend = first.closest('fieldset')?.querySelector('legend');
+      if (legend) label = (legend.textContent || '').trim();
+      if (!label) {
+        const heading = first.closest('div, li, section')?.querySelector('label, p, span, h3, h4');
+        if (heading) label = (heading.textContent || '').trim();
+      }
+      if (!label) label = fieldLabel(doc, first);
+      const options = els.map((el) => fieldLabel(doc, el) || el.value).filter(Boolean);
+      fields.push({
+        id: first.id || null,
+        name: first.name || null,
+        type: 'radio',
+        label: label.replace(/\s+/g, ' ').slice(0, 120),
+        placeholder: null,
+        required: els.some((el) => el.required),
+        currentValue: (els.find((el) => el.checked) || {}).value || null,
+        options: options.length ? options : null,
       });
     });
     return fields;
   },
 
-  genericInject(answers) {
+  /**
+   * Portal-agnostic inject: native text/tel/checkbox/radio and real <select>.
+   * Skips React-Select comboboxes (handled by greenhouseJobBoard).
+   */
+  async genericInject(answers) {
     const { doc } = page();
     let filled = 0;
-    answers.forEach(({ label, answer }) => {
-      if (!answer) return;
-      const inputs = doc.querySelectorAll('input:not([type="hidden"]):not([type="submit"]):not([type="button"]), textarea, select');
+    for (const item of answers) {
+      const label = item.label;
+      const answer = normalizeInjectAnswer(label, item.answer);
+      if (!answer) continue;
+      const inputs = doc.querySelectorAll(
+        'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="file"]):not([type="search"]), textarea, select',
+      );
       for (const input of inputs) {
-        if (isSubmitControl(input)) continue;
-        let inputLabel = '';
-        if (input.id) {
-          const labelEl = doc.querySelector(`label[for="${input.id}"]`);
-          if (labelEl) inputLabel = cleanLabel(labelEl);
+        if (isSubmitControl(input) || isDummyRequired(input)) continue;
+        // Leave React-Select / intl-tel search to Greenhouse Job Board handler.
+        if (isReactSelectInput(input)) continue;
+        if (input.id?.startsWith('iti-') || input.classList?.contains('iti__search-input')) continue;
+
+        let inputLabel = fieldLabel(doc, input) || input.getAttribute('aria-label') || input.placeholder || input.name || '';
+        const consentish = input.type === 'checkbox'
+          && /consent|privacy|gdpr|terms|policy/i.test(inputLabel)
+          && /consent|privacy|agree|policy/i.test(label);
+        if (!inputLabel || (!labelsMatch(inputLabel, label) && !consentish)) continue;
+        if (/resume|cv|cover letter/i.test(inputLabel)) continue;
+
+        try {
+          input.scrollIntoView?.({ block: 'center', inline: 'nearest' });
+        } catch { /* ignore */ }
+        await sleep(80);
+
+        if (input.type === 'checkbox') {
+          const yes = /^(yes|true|agree|i agree|on|1)$/i.test(String(answer).trim());
+          if (yes !== input.checked) input.click();
+          if (yes && !input.checked) {
+            input.checked = true;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          filled++;
+          break;
         }
-        if (!inputLabel) {
-          const closest = input.closest('label');
-          if (closest) inputLabel = cleanLabel(closest);
-        }
-        if (!inputLabel) inputLabel = input.getAttribute('aria-label') || input.placeholder || input.name || '';
-        if (!inputLabel || !labelsMatch(inputLabel, label)) continue;
         if (input.type === 'radio') {
-          if (norm(input.value) === norm(answer) || norm(input.value).includes(norm(answer))) {
+          const choice = fieldLabel(doc, input) || input.value;
+          if (optionMatch(answer, choice)) {
             input.checked = true;
             input.dispatchEvent(new MouseEvent('click', { bubbles: true }));
             input.dispatchEvent(new Event('change', { bubbles: true }));
@@ -178,15 +492,12 @@ const PortalEngine = {
           continue;
         }
         if (input.tagName === 'SELECT') {
-          for (const opt of input.options) {
-            const optText = opt.text || opt.label || '';
-            if (norm(optText).includes(norm(answer)) || norm(answer).includes(norm(optText))) {
-              input.value = opt.value;
-              input.dispatchEvent(new Event('input', { bubbles: true }));
-              input.dispatchEvent(new Event('change', { bubbles: true }));
-              filled++;
-              break;
-            }
+          const hit = pickSelectOption(input, answer);
+          if (hit) {
+            input.value = hit.value;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            filled++;
           }
         } else {
           setNativeValue(input, answer);
@@ -194,7 +505,7 @@ const PortalEngine = {
         }
         break;
       }
-    });
+    }
     return filled;
   }
 };
@@ -284,61 +595,171 @@ PortalEngine.register('workday', {
     return fields;
   },
 
-  inject(doc, answers) {
+  async inject(doc, answers) {
     let filled = 0;
-    const formFields = doc.querySelectorAll('[data-automation-id^="formField-"], [data-automation-id="radioGroup"]');
-    answers.forEach(({ label, answer }) => {
-      if (!answer) return;
-      for (const field of formFields) {
-        const labelEl = field.querySelector('[data-automation-id="formLabel"], label, .css-1ud5i8o');
-        const fLabel = labelEl ? cleanLabel(labelEl) : null;
-        if (!fLabel || !labelsMatch(fLabel, label)) continue;
+    const formFields = [...doc.querySelectorAll('[data-automation-id^="formField-"], [data-automation-id="radioGroup"]')];
+    const getLabel = (field) => {
+      const labelEl = field.querySelector('[data-automation-id="formLabel"], label, .css-1ud5i8o');
+      return labelEl ? cleanLabel(labelEl) : null;
+    };
 
-        const radios = field.querySelectorAll('input[type="radio"]');
-        if (radios.length > 0) {
-          for (const r of radios) {
-            const rLabel = doc.querySelector(`label[for="${r.id}"]`);
-            const rText = rLabel ? cleanLabel(rLabel) : r.value;
-            if (norm(rText) === norm(answer)) {
-              r.checked = true;
-              r.dispatchEvent(new Event('change', { bubbles: true }));
-              filled++; break;
-            }
-          }
-          break;
+    const clickPromptOption = async (answer) => {
+      await sleep(400);
+      // Prefer the open prompt panel so we don't click phone-code options.
+      const scope = doc.querySelector('[data-automation-id="responsiveMonikerPrompt"]') || doc;
+      const opts = [...scope.querySelectorAll(
+        '[data-automation-id="promptLeafNode"], [data-automation-id="promptOption"], [role="option"]',
+      )];
+      let best = null;
+      let bestScore = 0;
+      for (const opt of opts) {
+        const text = (opt.innerText || opt.textContent || '').trim();
+        if (!text || text.length > 120) continue;
+        let score = optionMatchScore(answer, text);
+        // Common ATS mapping: LinkedIn / Indeed → Social Media / Job Board parent nodes.
+        if (!score && /linkedin|indeed|glassdoor|twitter|facebook/i.test(answer) && /social media/i.test(text)) {
+          score = 50;
         }
-
-        const selectWidget = field.querySelector('[data-automation-id="selectWidget"]');
-        if (selectWidget) {
-          selectWidget.click();
-          setTimeout(() => {
-            const opts = doc.querySelectorAll('[data-automation-id="promptOption"]');
-            for (const opt of opts) {
-              if (norm(opt.innerText) === norm(answer)) { opt.click(); filled++; break; }
-            }
-          }, 300);
-          break;
+        if (!score && /linkedin|indeed|glassdoor/i.test(answer) && /job board/i.test(text)) {
+          score = 40;
         }
-
-        const select = field.querySelector('select');
-        if (select) {
-          for (const opt of select.options) {
-            if (norm(opt.value) === norm(answer) || norm(opt.text) === norm(answer)) {
-              select.value = opt.value;
-              select.dispatchEvent(new Event('change', { bubbles: true }));
-              filled++; break;
-            }
-          }
-          break;
+        if (score > bestScore) {
+          bestScore = score;
+          best = opt;
         }
-
-        const el = field.querySelector('textarea') ||
-          field.querySelector('input:not([type="hidden"]):not([type="file"])');
-        if (el) { setNativeValue(el, answer); filled++; }
-        break;
       }
-    });
-    return filled;
+      if (best) {
+        best.scrollIntoView?.({ block: 'nearest' });
+        best.click();
+        await sleep(300);
+        // Some sources are hierarchical — pick a leaf if another panel opened.
+        const nested = [...(doc.querySelector('[data-automation-id="responsiveMonikerPrompt"]') || doc)
+          .querySelectorAll('[data-automation-id="promptLeafNode"], [data-automation-id="promptOption"]')];
+        const nestedHit = nested.find((o) => optionMatch(answer, (o.innerText || '').trim())
+          || (/linkedin/i.test(answer) && /linkedin/i.test(o.innerText || '')));
+        if (nestedHit && nestedHit !== best) {
+          nestedHit.click();
+          await sleep(200);
+        }
+        return true;
+      }
+      return false;
+    };
+
+    const rankAnswer = ({ label }) => {
+      const l = String(label || '').toLowerCase();
+      if (/how did you hear|source|phone code/i.test(l)) return 2; // multiselects last
+      if (/country|state|region|device type/i.test(l)) return 1; // listboxes mid
+      return 0; // text/radio first
+    };
+    const ordered = [...answers].filter((a) => a.answer).sort((a, b) => rankAnswer(a) - rankAnswer(b));
+
+    for (const { label, answer } of ordered) {
+      const field = pickBestField(formFields, label, getLabel);
+      if (!field) continue;
+
+      const radios = field.querySelectorAll('input[type="radio"]');
+      if (radios.length > 0) {
+        for (const r of radios) {
+          const rLabel = doc.querySelector(`label[for="${r.id}"]`);
+          const rText = rLabel ? cleanLabel(rLabel) : r.value;
+          if (optionMatch(answer, rText) || norm(r.value) === norm(answer)) {
+            r.click();
+            r.checked = true;
+            r.dispatchEvent(new Event('change', { bubbles: true }));
+            filled++;
+            break;
+          }
+        }
+        continue;
+      }
+
+      // Workday listbox (Country, State, Phone Device Type) — never type into the companion <input>.
+      const listBtn = field.querySelector('button[aria-haspopup="listbox"]');
+      if (listBtn) {
+        const shown = `${listBtn.innerText || ''} ${listBtn.getAttribute('aria-label') || ''}`;
+        if (optionMatch(answer, shown) || (answer.length > 4 && norm(shown).includes(norm(answer)))) {
+          filled++;
+          continue;
+        }
+        listBtn.click();
+        await sleep(300);
+        // Listbox options often use promptOption in a popup — match within document but prefer visible.
+        const opts = [...doc.querySelectorAll('[data-automation-id="promptOption"], [role="option"], li')];
+        const hit = opts.find((o) => optionMatch(answer, (o.innerText || '').trim())
+          || (answer.length > 3 && norm(o.innerText).includes(norm(answer))));
+        if (hit) {
+          hit.click();
+          filled++;
+          await sleep(200);
+        }
+        continue;
+      }
+
+      // How did you hear / Country Phone Code multiselect prompts.
+      const multi = field.querySelector('[data-automation-id="multiSelectContainer"]');
+      if (multi) {
+        const selected = [...multi.querySelectorAll('[data-automation-id="selectedItem"]')]
+          .map((el) => (el.innerText || '').trim())
+          .filter(Boolean);
+        if (selected.some((t) => optionMatch(answer, t) || norm(t).includes(norm(answer)))) {
+          filled++;
+          continue;
+        }
+        const input = field.querySelector('input[type="text"]');
+        if (input) {
+          multi.click();
+          await sleep(200);
+          input.click();
+          input.focus();
+          await sleep(200);
+          let ok = await clickPromptOption(answer);
+          if (!ok) {
+            setNativeValue(input, '');
+            let typed = '';
+            for (const ch of String(answer)) {
+              typed += ch;
+              setNativeValue(input, typed);
+              if (typeof InputEvent === 'function') {
+                input.dispatchEvent(new InputEvent('input', { bubbles: true, data: ch, inputType: 'insertText' }));
+              }
+              await sleep(40);
+            }
+            await sleep(500);
+            ok = await clickPromptOption(answer);
+          }
+          if (ok) filled++;
+        }
+        continue;
+      }
+
+      const selectWidget = field.querySelector('[data-automation-id="selectWidget"]');
+      if (selectWidget) {
+        selectWidget.click();
+        if (await clickPromptOption(answer)) filled++;
+        continue;
+      }
+
+      const select = field.querySelector('select');
+      if (select) {
+        const hit = pickSelectOption(select, answer);
+        if (hit) {
+          select.value = hit.value;
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+          filled++;
+        }
+        continue;
+      }
+
+      const el = field.querySelector('textarea')
+        || field.querySelector('input:not([type="hidden"]):not([type="file"]):not([type="radio"]):not([type="checkbox"])');
+      if (el) {
+        setNativeValue(el, answer);
+        filled++;
+      }
+    }
+    // Generic pass would type into listbox companion inputs and can wipe the form.
+    return { filled, skipGeneric: true };
   }
 });
 
@@ -352,9 +773,25 @@ PortalEngine.register('lever', {
   scrape(doc) {
     const fields = [];
     const seen = new Set();
+    const leverQuestionLabel = (question) => {
+      const text = question.querySelector('.application-label .text');
+      if (text) return cleanLabel(text);
+      const appLabel = question.querySelector('.application-label');
+      if (!appLabel) return null;
+      // EEO block often has bare text nodes (no .text wrapper).
+      const direct = [...appLabel.childNodes]
+        .filter((n) => n.nodeType === 3)
+        .map((n) => n.textContent || '')
+        .join(' ')
+        .trim();
+      return String(direct || appLabel.textContent || '')
+        .replace(/\s+/g, ' ')
+        .replace(/[*:✱＊]+$/g, '')
+        .trim();
+    };
+
     doc.querySelectorAll('.application-question').forEach(question => {
-      const labelEl = question.querySelector('.application-label .text, .application-label');
-      const label = labelEl ? cleanLabel(labelEl) : null;
+      const label = leverQuestionLabel(question);
       if (!label || seen.has(norm(label))) return;
       const fieldDiv = question.querySelector('.application-field');
       if (!fieldDiv) return;
@@ -364,8 +801,29 @@ PortalEngine.register('lever', {
         const radios = Array.from(radioGroup.querySelectorAll('input[type="radio"]'));
         seen.add(norm(label));
         fields.push({ label, type: 'radio', name: radios[0]?.name || null, id: null,
-          required: !!radios.find(r => r.required), options: radios.map(r => r.value).filter(Boolean),
+          required: !!radios.find(r => r.required),
+          // Prefer visible label text — Lever value attrs can disagree with the span text.
+          options: radios.map((r) => {
+            const span = r.parentElement?.querySelector('.application-answer-alternative');
+            return (span?.textContent || r.value || '').trim();
+          }).filter(Boolean),
           placeholder: null, currentValue: null });
+        return;
+      }
+
+      const checkGroup = fieldDiv.querySelector('ul[data-qa="checkboxes"]');
+      if (checkGroup) {
+        const boxes = Array.from(checkGroup.querySelectorAll('input[type="checkbox"]'));
+        seen.add(norm(label));
+        fields.push({
+          label, type: 'checkbox', name: boxes[0]?.name || null, id: null,
+          required: false,
+          options: boxes.map((b) => {
+            const span = b.parentElement?.querySelector('.application-answer-alternative');
+            return (span?.textContent || b.value || '').trim();
+          }).filter(Boolean),
+          placeholder: null, currentValue: null,
+        });
         return;
       }
 
@@ -399,41 +857,84 @@ PortalEngine.register('lever', {
 
   inject(doc, answers) {
     let filled = 0;
-    answers.forEach(({ label, answer }) => {
-      if (!answer) return;
-      for (const question of doc.querySelectorAll('.application-question')) {
-        const labelEl = question.querySelector('.application-label .text, .application-label');
-        const qLabel = labelEl ? cleanLabel(labelEl) : null;
-        if (!qLabel || !labelsMatch(qLabel, label)) continue;
-        const fieldDiv = question.querySelector('.application-field');
-        if (!fieldDiv) break;
+    const questions = [...doc.querySelectorAll('.application-question')];
+    const getLabel = (question) => {
+      const text = question.querySelector('.application-label .text');
+      if (text) return cleanLabel(text);
+      const appLabel = question.querySelector('.application-label');
+      if (!appLabel) return null;
+      const direct = [...appLabel.childNodes]
+        .filter((n) => n.nodeType === 3)
+        .map((n) => n.textContent || '')
+        .join(' ')
+        .trim();
+      return (direct || cleanLabel(appLabel) || '').replace(/[*:✱＊]+$/g, '').trim();
+    };
+    const visibleChoiceText = (input) => {
+      const span = input.parentElement?.querySelector('.application-answer-alternative');
+      return (span?.textContent || input.value || '').trim();
+    };
 
-        const radios = fieldDiv.querySelectorAll('input[type="radio"]');
-        if (radios.length > 0) {
-          for (const r of radios) {
-            if (norm(r.value) === norm(answer) || norm(r.value).includes(norm(answer))) {
-              r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); filled++; break;
-            }
+    for (const { label, answer } of answers) {
+      if (!answer) continue;
+      const question = pickBestField(questions, label, getLabel);
+      if (!question) continue;
+      const fieldDiv = question.querySelector('.application-field');
+      if (!fieldDiv) continue;
+
+      const checkboxes = [...fieldDiv.querySelectorAll('ul[data-qa="checkboxes"] input[type="checkbox"]')];
+      if (checkboxes.length > 0) {
+        // Match visible text only — Lever's value= can be wrong (e.g. value=Asian on White).
+        const box = pickBestChoice(checkboxes, answer, visibleChoiceText);
+        if (box) {
+          if (!box.checked) {
+            box.click();
+            box.checked = true;
+            box.dispatchEvent(new Event('change', { bubbles: true }));
           }
-          break;
+          filled++;
         }
-
-        const select = fieldDiv.querySelector('select');
-        if (select) {
-          for (const opt of select.options) {
-            if (norm(opt.value) === norm(answer) || norm(opt.text) === norm(answer)) {
-              select.value = opt.value; select.dispatchEvent(new Event('change', { bubbles: true })); filled++; break;
-            }
-          }
-          break;
-        }
-
-        const el = fieldDiv.querySelector('textarea') || fieldDiv.querySelector('input:not([type="hidden"]):not([type="file"])');
-        if (el) { setNativeValue(el, answer); filled++; }
-        break;
+        continue;
       }
-    });
-    return filled;
+
+      const radios = [...fieldDiv.querySelectorAll('input[type="radio"]')];
+      if (radios.length > 0) {
+        const r = pickBestChoice(radios, answer, (el) => visibleChoiceText(el) || el.value);
+        if (r) {
+          r.checked = true;
+          r.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+          r.dispatchEvent(new Event('change', { bubbles: true }));
+          filled++;
+        }
+        continue;
+      }
+
+      const select = fieldDiv.querySelector('select');
+      if (select) {
+        const hit = pickSelectOption(select, answer);
+        if (hit) {
+          select.value = hit.value;
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+          filled++;
+        }
+        continue;
+      }
+
+      const el = fieldDiv.querySelector('textarea')
+        || fieldDiv.querySelector('input:not([type="hidden"]):not([type="file"]):not([type="checkbox"]):not([type="radio"])');
+      if (el) {
+        let value = answer;
+        if (/^phone$|phone\b|mobile|cell/i.test(label)) {
+          const digits = String(answer).replace(/\D/g, '');
+          const national = digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits.slice(-10);
+          if (national.length >= 10) value = national;
+        }
+        setNativeValue(el, value);
+        filled++;
+      }
+    }
+    // Avoid generic pass rematching Lever checkboxes by broken value= attrs.
+    return { filled, skipGeneric: true };
   }
 });
 
@@ -501,7 +1002,21 @@ PortalEngine.register('greenhouse', {
     return fields;
   },
 
-  inject(doc, answers) {
+  async inject(doc, answers) {
+    if (isGreenhouseJobBoard(doc)) {
+      console.log('[PortalEngine] Greenhouse Job Board — using portals/greenhouseJobBoard.js');
+      const result = await injectGreenhouseJobBoard(doc, answers);
+      // injectGreenhouseJobBoard returns { filled, okLabels, failed } — do not nest it as filled.
+      if (result && typeof result === 'object') {
+        return {
+          filled: typeof result.filled === 'number' ? result.filled : 0,
+          okLabels: Array.isArray(result.okLabels) ? result.okLabels : [],
+          failed: Array.isArray(result.failed) ? result.failed : [],
+          skipGeneric: true,
+        };
+      }
+      return { filled: result || 0, okLabels: [], failed: [], skipGeneric: true };
+    }
     let filled = 0;
     answers.forEach(({ label, answer }) => {
       if (!answer) return;
@@ -513,17 +1028,10 @@ PortalEngine.register('greenhouse', {
 
         const radios = field.querySelectorAll('input[type="radio"]');
         if (radios.length > 0) {
-          // Try exact match first, then partial
           let matched = null;
           for (const r of radios) {
             const rLabel = r.closest('label') ? cleanLabel(r.closest('label')) : r.value;
-            if (norm(rLabel) === norm(answer) || norm(r.value) === norm(answer)) { matched = r; break; }
-          }
-          if (!matched) {
-            for (const r of radios) {
-              const rLabel = r.closest('label') ? cleanLabel(r.closest('label')) : r.value;
-              if (norm(rLabel).includes(norm(answer)) || norm(answer).includes(norm(rLabel))) { matched = r; break; }
-            }
+            if (optionMatch(answer, rLabel) || optionMatch(answer, r.value)) { matched = r; break; }
           }
           if (matched) {
             matched.checked = true;
@@ -536,21 +1044,18 @@ PortalEngine.register('greenhouse', {
 
         const select = field.querySelector('select');
         if (select) {
-          let matched = false;
-          for (const opt of select.options) {
-            if (norm(opt.value) === norm(answer) || norm(opt.text) === norm(answer) ||
-                norm(opt.text).includes(norm(answer)) || norm(answer).includes(norm(opt.text))) {
-              select.value = opt.value;
-              select.dispatchEvent(new Event('input', { bubbles: true }));
-              select.dispatchEvent(new Event('change', { bubbles: true }));
-              matched = true; filled++; break;
-            }
+          const hit = pickSelectOption(select, answer);
+          if (hit) {
+            select.value = hit.value;
+            select.dispatchEvent(new Event('input', { bubbles: true }));
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            filled++;
           }
           break;
         }
 
         const el = field.querySelector('textarea') || field.querySelector('input:not([type="hidden"]):not([type="file"])');
-        if (el) { setNativeValue(el, answer); filled++; }
+        if (el && !isReactSelectInput(el)) { setNativeValue(el, answer); filled++; }
         break;
       }
     });
@@ -611,38 +1116,93 @@ PortalEngine.register('ashby', {
     return fields;
   },
 
-  inject(doc, answers) {
+  async inject(doc, answers) {
     let filled = 0;
-    answers.forEach(({ label, answer }) => {
-      if (!answer) return;
-      for (const fieldEl of doc.querySelectorAll('[data-field-path]')) {
-        const labelEl = fieldEl.querySelector('.ashby-application-form-question-title, label, [class*="title"]');
-        const fLabel = labelEl ? cleanLabel(labelEl) : null;
-        if (!fLabel || !labelsMatch(fLabel, label)) continue;
+    const fieldEls = [...doc.querySelectorAll('[data-field-path]')];
+    const getLabel = (fieldEl) => {
+      const labelEl = fieldEl.querySelector('.ashby-application-form-question-title, label, [class*="title"]');
+      return labelEl ? cleanLabel(labelEl) : null;
+    };
 
-        const yesNo = Array.from(fieldEl.querySelectorAll('[data-value]'));
-        if (yesNo.length) {
-          const btn = yesNo.find(b => norm(b.dataset.value || b.innerText) === norm(answer));
-          if (btn) { btn.click(); filled++; }
-          break;
-        }
-
-        const select = fieldEl.querySelector('select');
-        if (select) {
-          for (const opt of select.options) {
-            if (norm(opt.value) === norm(answer) || norm(opt.text) === norm(answer)) {
-              select.value = opt.value; select.dispatchEvent(new Event('change', { bubbles: true })); filled++; break;
-            }
-          }
-          break;
-        }
-
-        const el = fieldEl.querySelector('textarea') || fieldEl.querySelector('input:not([type="hidden"]):not([type="file"])');
-        if (el) { setNativeValue(el, answer); filled++; }
-        break;
+    const fillAutocomplete = async (input, answer) => {
+      const query = String(answer).split(',')[0].trim();
+      input.scrollIntoView?.({ block: 'center' });
+      input.click();
+      input.focus();
+      setNativeValue(input, '');
+      setNativeValue(input, query);
+      if (typeof InputEvent === 'function') {
+        input.dispatchEvent(new InputEvent('input', { bubbles: true, data: query, inputType: 'insertText' }));
       }
-    });
-    return filled;
+      await sleep(700);
+      const opts = [...doc.querySelectorAll('[role="option"], [role="listbox"] li, [class*="option"]')]
+        .filter((el) => (el.textContent || '').trim().length > 1);
+      const hit = opts.find((o) => optionMatch(answer, (o.textContent || '').trim()))
+        || opts.find((o) => optionMatch(query, (o.textContent || '').trim()))
+        || opts.find((o) => norm(o.textContent).includes(norm(query)));
+      // Never click opts[0] — that invents a location/employer the candidate did not choose.
+      if (hit) {
+        hit.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+        hit.click();
+        await sleep(250);
+        return true;
+      }
+      // Leave typed query; do not ArrowDown+Enter (accepts first unrelated suggestion).
+      return false;
+    };
+
+    for (const { label, answer } of answers) {
+      if (!answer) continue;
+      const fieldEl = pickBestField(fieldEls, label, getLabel);
+      if (!fieldEl) continue;
+
+      const yesNo = Array.from(fieldEl.querySelectorAll('[data-value]'));
+      if (yesNo.length) {
+        const btn = yesNo.find((b) => optionMatch(answer, b.dataset.value || b.innerText));
+        if (btn) { btn.click(); filled++; }
+        continue;
+      }
+
+      const select = fieldEl.querySelector('select');
+      if (select) {
+        const hit = pickSelectOption(select, answer);
+        if (hit) {
+          select.value = hit.value;
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+          filled++;
+        }
+        continue;
+      }
+
+      const checkbox = fieldEl.querySelector('input[type="checkbox"]');
+      if (checkbox && !fieldEl.querySelector('input[role="combobox"], .ashby-application-form-input-autocomplete')) {
+        const want = /^(yes|true|1|on|checked)$/i.test(String(answer).trim());
+        const wantNo = /^(no|false|0|off|uncheck)/i.test(String(answer).trim());
+        if (wantNo && checkbox.checked) {
+          checkbox.click();
+          filled++;
+        } else if (want && !checkbox.checked) {
+          checkbox.click();
+          filled++;
+        } else if (wantNo || want) {
+          filled++;
+        }
+        continue;
+      }
+
+      const combo = fieldEl.querySelector(
+        'input[role="combobox"], input.ashby-application-form-input-autocomplete, input[aria-autocomplete="list"]',
+      );
+      if (combo) {
+        if (await fillAutocomplete(combo, answer)) filled++;
+        continue;
+      }
+
+      const el = fieldEl.querySelector('textarea')
+        || fieldEl.querySelector('input:not([type="hidden"]):not([type="file"]):not([type="checkbox"])');
+      if (el) { setNativeValue(el, answer); filled++; }
+    }
+    return { filled, skipGeneric: true };
   }
 });
 

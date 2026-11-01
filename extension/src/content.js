@@ -5,7 +5,7 @@ import { PortalEngine } from './portalEngine.js';
 
 window.PortalEngine = PortalEngine;
 
-const SCRIPT_VERSION = 'v2025-05-29-engine-3';
+const SCRIPT_VERSION = 'v2025-10-31-live-ok';
 
 (function () {
   'use strict';
@@ -100,20 +100,39 @@ const SCRIPT_VERSION = 'v2025-05-29-engine-3';
     }
 
     if (request.action === 'scrapeFormFields') {
-      try {
-        const fields = PortalEngine.scrape();
-        console.log('[JobFitly] scraped', fields.length, 'fields');
-        sendResponse({ fields, url: window.location.href, title: document.title });
-      } catch (err) {
-        console.error('[JobFitly] scrape error:', err);
-        sendResponse({ fields: [], error: err.message });
-      }
-      return false;
+      Promise.resolve(PortalEngine.scrape())
+        .then((fields) => {
+          console.log('[JobFitly] scraped', fields.length, 'fields');
+          sendResponse({ fields, url: window.location.href, title: document.title });
+        })
+        .catch((err) => {
+          console.error('[JobFitly] scrape error:', err);
+          sendResponse({ fields: [], error: err.message });
+        });
+      return true;
     }
 
     if (request.action === 'injectAutofill') {
-      const filled = PortalEngine.inject(request.answers || []);
-      sendResponse({ filled });
+      Promise.resolve(PortalEngine.inject(request.answers || []))
+        .then((result) => {
+          if (result && typeof result === 'object') {
+            sendResponse({
+              filled: result.filled || 0,
+              okLabels: result.okLabels || [],
+              failed: result.failed || [],
+            });
+          } else {
+            sendResponse({ filled: result || 0, okLabels: [], failed: [] });
+          }
+        })
+        .catch((err) => sendResponse({ filled: 0, okLabels: [], failed: [], error: err.message }));
+      return true;
+    }
+
+    if (request.action === 'scrapeFieldOptions') {
+      Promise.resolve(PortalEngine.scrapeOptionsForLabel(request.label))
+        .then((options) => sendResponse({ options: options || [] }))
+        .catch((err) => sendResponse({ options: [], error: err.message }));
       return true;
     }
 

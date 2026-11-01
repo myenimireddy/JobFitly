@@ -235,10 +235,17 @@ export function AppProvider({ children }) {
     dispatch({ type: ACTIONS.SET_ERROR, key, value: null });
   }, []);
 
+  const setProfile = useCallback((profile) => {
+    if (!profile) return;
+    dispatch({ type: ACTIONS.SET_PROFILE, payload: profile });
+    if (profile.id) localStorage.setItem(STORAGE_KEY, profile.id);
+  }, []);
+
   const value = {
     ...state,
     uploadResume,
     updateProfile,
+    setProfile,
     extractJob,
     runMatch,
     resetJob,

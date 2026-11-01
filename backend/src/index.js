@@ -24,10 +24,14 @@ app.use(cors({ origin: config.corsOrigin }));
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 
-// Long-running LLM requests can take 60-120s — set a 150s hard timeout
-// so the server returns 504 instead of hanging indefinitely
 app.use((req, res, next) => {
-  res.setTimeout(150_000, () => {
+  const url = req.originalUrl || '';
+  // Match Ollama extract default (10m). Upload may run multiple passes → 20m.
+  let ms = 10 * 60 * 1000;
+  if (url.startsWith('/api/profile/upload')) ms = 20 * 60 * 1000;
+  else if (url.startsWith('/health') || url.startsWith('/api/llm/status')) ms = 30_000;
+  req.setTimeout(ms);
+  res.setTimeout(ms, () => {
     if (!res.headersSent) {
       res.status(504).json({ success: false, data: null, error: 'Request timed out — LLM may be overloaded, please retry' });
     }
@@ -72,7 +76,23 @@ app.use(errorHandler);
 
 const server = app.listen(config.port, () => {
   console.log(`Server running on port ${config.port} in ${config.nodeEnv} mode`);
+  if ((config.llmProvider || 'ollama').toLowerCase() === 'ollama') {
+    const LLMFactory = require('./llm/factory');
+    try {
+      const llm = LLMFactory.create();
+      if (typeof llm.warmup === 'function') {
+        llm.warmup();
+      }
+    } catch (err) {
+      console.warn('[server] Ollama warmup skipped:', err.message);
+    }
+  }
 });
+
+// Node 18 defaults requestTimeout to 5 minutes — that killed long resume parses
+server.requestTimeout = 20 * 60 * 1000;
+server.headersTimeout = 21 * 60 * 1000;
+server.timeout = 20 * 60 * 1000;
 
 // Log crashes and exit cleanly so nodemon can restart the server
 process.on('uncaughtException', (err) => {
