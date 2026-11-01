@@ -532,9 +532,13 @@ PortalEngine.register('workday', {
 
   scrape(doc) {
     const fields = [];
-    const seenAuto = new Set();
-    // Do NOT dedupe by label — Work Experience 2+ reuses "Job Title", "Company", …
-    const allFields = doc.querySelectorAll('[data-automation-id^="formField-"], [data-automation-id="radioGroup"]');
+    // Do NOT dedupe by label or automation-id — Work Experience 2+ and
+    // "Add" rows reuse "Job Title" / formField-jobTitle. Only collapse
+    // nested duplicates (radioGroup inside a formField wrapper).
+    const rawFields = [...doc.querySelectorAll(
+      '[data-automation-id^="formField-"], [data-automation-id="radioGroup"]',
+    )];
+    const allFields = rawFields.filter((el) => !rawFields.some((other) => other !== el && other.contains(el)));
     console.log(`[PortalEngine] Workday: found ${allFields.length} fields`);
 
     let experienceIndex = -1;
@@ -564,10 +568,6 @@ PortalEngine.register('workday', {
     };
 
     allFields.forEach((field) => {
-      const autoId = field.dataset.automationId || '';
-      if (autoId && seenAuto.has(autoId.toLowerCase())) return;
-      if (autoId) seenAuto.add(autoId.toLowerCase());
-
       const labelEl = field.querySelector('[data-automation-id="formLabel"], label, .css-1ud5i8o');
       const label = labelEl ? cleanLabel(labelEl) : null;
       if (!label) return;
@@ -599,11 +599,15 @@ PortalEngine.register('workday', {
 
       const selectWidget = field.querySelector('[data-automation-id="selectWidget"]');
       if (selectWidget) {
+        const rawSelectText = (selectWidget.innerText || '').trim().replace(/\s+/g, ' ');
+        const emptySelect = !rawSelectText
+          || /^(please\s+)?(select|choose)\b/i.test(rawSelectText);
         pushField({
           label, type: 'select', name: null, id: selectWidget.id || null,
           required: selectWidget.getAttribute('aria-required') === 'true',
           options: Array.from(doc.querySelectorAll('[data-automation-id="promptOption"]')).map(o => o.innerText.trim()).filter(Boolean),
-          placeholder: null, currentValue: selectWidget.innerText.trim() || null,
+          placeholder: emptySelect ? rawSelectText || 'Select One' : null,
+          currentValue: emptySelect ? null : rawSelectText,
         });
         return;
       }

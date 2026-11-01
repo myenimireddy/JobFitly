@@ -110,6 +110,9 @@ async function run() {
     const fields = await PortalEngine.scrape();
     check(fields.length > 0, `workday: scraped ${fields.length} fields`);
     check(!!fields.find((f) => /email/i.test(f.label)), 'workday: found Email');
+    const jobTitles = fields.filter((f) => /^job title$/i.test(String(f.label || '').replace(/\*$/, '').trim()));
+    check(jobTitles.length >= 2, `workday: both Job Title rows scraped (${jobTitles.length})`);
+    check(jobTitles[0]?.experienceIndex === 0 && jobTitles[1]?.experienceIndex === 1, 'workday: experienceIndex 0/1');
 
     const n = filledCount(await PortalEngine.inject([
       { label: 'Email', answer: 'ada@example.com' },
