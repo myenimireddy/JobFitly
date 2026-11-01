@@ -22,7 +22,9 @@ PRIVACY:
 
 Rules:
 - If you cannot answer from the profile, set "answer" to null and "missing" to true.
-- For cover letter / "why interested" fields: 2-3 sentences using skills already in the profile.
+- For cover letter / "why interested" / experience / partnerships / ecosystem questions:
+  write 2-4 sentences grounded only in skills, roles, companies, and achievements already in the profile.
+  Do not invent employers, investors, labs, or deals that are not in the profile.
 - For yes/no, radio, or select: pick only from the provided options, or return null.
 - Answers must be strings or null.
 
@@ -112,6 +114,49 @@ class AutofillService {
       missingFields,
       privacyMode: cloud ? 'cloud' : 'local',
     };
+  }
+
+  /**
+   * On-demand draft for one HITL field (user clicked Ask AI).
+   * Always attempts the LLM; never auto-injects — caller still reviews.
+   */
+  async draftFieldAnswer(profileId, field, pageContext) {
+    const { parsed } = await loadProfile(profileId);
+    const extraAnswers = parsed.extraAnswers || {};
+    const plan = planField(field, parsed, extraAnswers);
+
+    if (plan.skip) {
+      return { label: field.label, answer: null, missing: true, source: null };
+    }
+
+    try {
+      const { sanitized, restore } = sanitizeProfile(parsed);
+      const llm = LLMFactory.create();
+      const raw = await llm.extract(
+        buildSystemPrompt(),
+        buildUserPrompt(sanitized, [field], pageContext || {}),
+      );
+      const parsedList = parseLlmList(raw);
+      const restored = restoreAnswers(parsedList, restore);
+      const llmItem = restored.find((i) => i.label === field.label)
+        || restored.find((i) => canonicalKey(i.label) === canonicalKey(field.label))
+        || restored[0]
+        || { answer: null };
+      const applied = applyLlmAnswer({ ...plan, needsLLM: true }, llmItem);
+      return {
+        label: field.label,
+        answer: applied.answer,
+        missing: !applied.answer,
+        source: applied.answer ? 'llm' : null,
+        bucket: applied.answer ? 'ask' : 'missing',
+      };
+    } catch (err) {
+      console.warn('[autofill] draftFieldAnswer failed:', err.message);
+      throw Object.assign(
+        new Error(err.message || 'AI draft failed — try again or type your answer'),
+        { statusCode: 502 },
+      );
+    }
   }
 
   async saveMissingAnswers(profileId, userAnswers) {

@@ -41,9 +41,10 @@ Page DOM
 |--------|--------|----------------|
 | `known` | `profile` / saved | Inject after pacing (no review) |
 | `ask` | `llm` | **Always** pause for human review before inject |
-| `missing` | — | Ask human; may persist via `storageKeyForAnswer` |
+| `missing` | — | Ask human; free-text may **Ask AI** via `POST /api/autofill/draft` |
 
 Never auto-inject LLM drafts. Never invent work-auth / salary / legal yes-no.
+On-demand drafts still land in the HITL textarea for edit + Fill — they do not inject alone.
 
 ## Where to change what
 

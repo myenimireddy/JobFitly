@@ -98,17 +98,45 @@ function looksLikeDropdownField(field) {
   return /sexual orientation|gender identity|transgender|ethnicit|veteran|disabilit|authorized to work|sponsorship|how did you hear|device type|^country$/i.test(l);
 }
 
-function FieldPrompt({ field, value, onSelect, onTyped, onCommitText, busy }) {
+function isPhoneNumberField(field) {
+  const label = field?.label || '';
+  const type = (field?.type || '').toLowerCase();
+  if (type === 'tel') return true;
+  // National number box — not Country dial / device type.
+  return /^phone$|phone\b|mobile|cell|telephone/i.test(label)
+    && !/country|dial|device|extension|type/i.test(label);
+}
+
+/** Free-text / open questions get an on-demand Ask AI affordance. */
+function canAskAi(field, hasChoices) {
+  if (hasChoices) return false;
+  if (isConsentField(field?.label)) return false;
+  if (isPhoneNumberField(field)) return false;
+  const type = String(field?.type || '').toLowerCase();
+  if (type === 'email' || type === 'tel' || type === 'number' || type === 'date') return false;
+  const label = String(field?.label || '');
+  if (/^(email|first name|last name|full name|linkedin|github|website|city|state|zip|postal)/i.test(label)
+    && label.length < 40) {
+    return false;
+  }
+  return true;
+}
+
+function FieldPrompt({
+  field, value, onSelect, onTyped, onCommitText, onAskAi, busy, draftingAi, askAiError,
+}) {
   const scraped = cleanOptions(field.label, field.options);
   const choices = scraped.length ? scraped : (fallbackChoices(field.label) || []);
   const consent = isConsentField(field.label);
+  const showAskAi = canAskAi(field, choices.length > 0);
   const shortLabel = consent
     ? 'Privacy / consent acknowledgment'
     : field.label;
+  const hasText = !!(value && String(value).trim());
 
   return (
     <div className="rounded-lg border border-amber-700/40 bg-slate-800/50 px-2.5 py-2">
-      <p className="text-[11px] text-slate-400 mb-1 leading-snug line-clamp-3" title={field.label}>
+      <p className="text-[11px] text-slate-400 mb-1 leading-snug line-clamp-4" title={field.label}>
         {shortLabel}
       </p>
       {field._reviewHint && (
@@ -125,7 +153,7 @@ function FieldPrompt({ field, value, onSelect, onTyped, onCommitText, busy }) {
           <div className="flex gap-2">
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || draftingAi}
               onClick={() => onSelect(choices[0])}
               className="flex-1 py-2 px-3 rounded-lg text-xs font-medium bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-50"
             >
@@ -134,7 +162,7 @@ function FieldPrompt({ field, value, onSelect, onTyped, onCommitText, busy }) {
             {choices[1] && choices[1] !== choices[0] && (
               <button
                 type="button"
-                disabled={busy}
+                disabled={busy || draftingAi}
                 onClick={() => onSelect(choices[1])}
                 className="py-2 px-3 rounded-lg text-xs text-slate-300 border border-slate-600/50 hover:bg-slate-700/50 disabled:opacity-50"
               >
@@ -145,7 +173,7 @@ function FieldPrompt({ field, value, onSelect, onTyped, onCommitText, busy }) {
         ) : (
           <select
             value={choices.includes(value) ? value : ''}
-            disabled={busy}
+            disabled={busy || draftingAi}
             onChange={(e) => onSelect(e.target.value)}
             className="w-full bg-slate-900/80 border border-slate-600/40 rounded px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 disabled:opacity-50"
           >
@@ -156,32 +184,61 @@ function FieldPrompt({ field, value, onSelect, onTyped, onCommitText, busy }) {
           </select>
         )
       ) : (
-        <textarea
-          rows={2}
-          value={value || ''}
-          disabled={busy}
-          onChange={(e) => onTyped(e.target.value)}
-          onBlur={(e) => {
-            const v = (e.target.value || '').trim();
-            if (v) onCommitText(v);
-          }}
-          placeholder="Type answer, then click away to fill"
-          className="w-full bg-slate-900/80 border border-slate-600/40 rounded px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 resize-none disabled:opacity-50"
-        />
+        <>
+          <textarea
+            rows={showAskAi ? 4 : 2}
+            value={value || ''}
+            disabled={busy || draftingAi}
+            onChange={(e) => onTyped(e.target.value)}
+            placeholder={showAskAi ? 'Type an answer, or Ask AI for a draft' : 'Type answer, then Fill'}
+            className="w-full bg-slate-900/80 border border-slate-600/40 rounded px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 resize-y min-h-[2.5rem] disabled:opacity-50"
+          />
+          <div className="flex gap-2 mt-1.5">
+            {showAskAi && (
+              <button
+                type="button"
+                disabled={busy || draftingAi}
+                onClick={onAskAi}
+                className="flex-1 py-1.5 px-2 rounded-lg text-[11px] font-medium border border-indigo-500/50 text-indigo-300 hover:bg-indigo-500/15 disabled:opacity-50"
+              >
+                {draftingAi ? 'Drafting…' : (hasText ? 'Ask AI again' : 'Ask AI')}
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={busy || draftingAi || !hasText}
+              onClick={() => onCommitText(String(value).trim())}
+              className="flex-1 py-1.5 px-2 rounded-lg text-[11px] font-medium bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-40"
+            >
+              Fill
+            </button>
+          </div>
+          {askAiError && (
+            <p className="text-[10px] text-red-400 mt-1">{askAiError}</p>
+          )}
+          {draftingAi && (
+            <p className="text-[10px] text-slate-500 mt-1">Using your profile — usually 10–60s</p>
+          )}
+        </>
       )}
-      {busy && <p className="text-[10px] text-slate-500 mt-1">Filling…</p>}
+      {busy && !draftingAi && <p className="text-[10px] text-slate-500 mt-1">Filling…</p>}
     </div>
   );
 }
 
 async function ensureContentScript(tabId) {
+  // Avoid re-injecting: the content bundle used top-level `const _` (PortalEngine),
+  // so a second inject threw "Identifier '_' has already been declared" (seen on Ashby).
+  const alive = await sendMessageSafe(tabId, { action: 'ping' }, 1200);
+  if (alive?.ok) return;
+
   try {
     await chrome.scripting.executeScript({
       target: { tabId },
       files: ['content.js'],
       injectImmediately: true,
     });
-  } catch { /* already there */ }
+  } catch { /* page may already have an older inject */ }
   await sleep(350);
 }
 
@@ -211,15 +268,6 @@ async function injectOne(tabId, profileId, label, answer) {
     return { ok: true, filled: count || 1 };
   }
   return { ok: false, filled: 0, suggested: failed.find((f) => f.label === label)?.answer || answer };
-}
-
-function isPhoneNumberField(field) {
-  const label = field?.label || '';
-  const type = (field?.type || '').toLowerCase();
-  if (type === 'tel') return true;
-  // National number box — not Country dial / device type.
-  return /^phone$|phone\b|mobile|cell|telephone/i.test(label)
-    && !/country|dial|device|extension|type/i.test(label);
 }
 
 async function loadOptionsForField(tabId, field) {
@@ -272,10 +320,13 @@ export function AutofillSection({ profile }) {
   const [filledCount, setFilledCount] = useState(0);
   const [errorMsg, setErrorMsg] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [draftingAi, setDraftingAi] = useState(false);
+  const [askAiError, setAskAiError] = useState(null);
 
   const tabIdRef = useRef(null);
   const abortRef = useRef(false);
   const pickResolverRef = useRef(null);
+  const pageContextRef = useRef({});
 
   const reset = () => {
     abortRef.current = true;
@@ -292,6 +343,8 @@ export function AutofillSection({ profile }) {
     setFilledCount(0);
     setErrorMsg(null);
     setBusy(false);
+    setDraftingAi(false);
+    setAskAiError(null);
     tabIdRef.current = null;
   };
 
@@ -308,9 +361,11 @@ export function AutofillSection({ profile }) {
     }
     setCurrentField({
       ...enriched,
-      _reviewHint: llmDraft ? 'Review AI draft, edit if needed, then commit' : null,
+      _reviewHint: llmDraft ? 'Review AI draft, edit if needed, then Fill' : null,
     });
     setFieldValue(hint);
+    setAskAiError(null);
+    setDraftingAi(false);
     setStatus('needs_input');
     setBusy(false);
     setErrorMsg(null);
@@ -324,9 +379,51 @@ export function AutofillSection({ profile }) {
     if (!resolve) return;
     pickResolverRef.current = null;
     setBusy(true);
+    setDraftingAi(false);
+    setAskAiError(null);
     setStatus('working');
     setCurrentField(null);
     resolve(String(value || '').trim() || null);
+  };
+
+  const handleAskAi = async () => {
+    if (!profile || !currentField || draftingAi || busy) return;
+    setDraftingAi(true);
+    setAskAiError(null);
+    try {
+      const response = await fetch(`${API_BASE}/autofill/draft`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profileId: profile.id,
+          pageContext: pageContextRef.current,
+          field: {
+            label: currentField.label,
+            type: currentField.type,
+            required: currentField.required,
+            options: currentField.options || null,
+          },
+        }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(body.error || 'AI draft failed');
+      }
+      const draft = String(body?.data?.answer || '').trim();
+      if (!draft) {
+        setAskAiError('AI had nothing grounded in your profile — type your answer.');
+        return;
+      }
+      setFieldValue(draft);
+      setCurrentField((prev) => (prev ? {
+        ...prev,
+        _reviewHint: 'Review AI draft, edit if needed, then Fill',
+      } : prev));
+    } catch (err) {
+      setAskAiError(err.message || 'AI draft failed');
+    } finally {
+      setDraftingAi(false);
+    }
   };
 
   const handleFillForm = useCallback(async () => {
@@ -353,6 +450,8 @@ export function AutofillSection({ profile }) {
         return;
       }
 
+      pageContextRef.current = { url: scraped.url, title: scraped.title };
+
       setProgressLabel('Matching answers…');
       const response = await fetch(`${API_BASE}/autofill/generate`, {
         method: 'POST',
@@ -360,7 +459,7 @@ export function AutofillSection({ profile }) {
         body: JSON.stringify({
           profileId: profile.id,
           fields: scraped.fields,
-          pageContext: { url: scraped.url, title: scraped.title },
+          pageContext: pageContextRef.current,
         }),
       });
       if (!response.ok) {
@@ -489,9 +588,15 @@ export function AutofillSection({ profile }) {
             field={currentField}
             value={fieldValue}
             busy={busy}
+            draftingAi={draftingAi}
+            askAiError={askAiError}
             onSelect={(v) => resolveHuman(v)}
-            onTyped={(v) => setFieldValue(v)}
+            onTyped={(v) => {
+              setFieldValue(v);
+              if (askAiError) setAskAiError(null);
+            }}
             onCommitText={(v) => resolveHuman(v)}
+            onAskAi={handleAskAi}
           />
           {errorMsg && <p className="text-xs text-red-400 text-center mt-2">{errorMsg}</p>}
           <button type="button" onClick={reset} className="w-full py-1.5 text-xs text-slate-500 mt-2">
