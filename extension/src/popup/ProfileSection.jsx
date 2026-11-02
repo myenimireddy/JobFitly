@@ -1,9 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 /**
  * Profile upload / summary for the side panel.
+ * Clear = local UI only. Delete = permanent backend + local clear (confirm first).
  */
-export function ProfileSection({ profile, loading, onUpload, onClear, compact = false }) {
+export function ProfileSection({
+  profile,
+  loading,
+  onUpload,
+  onClear,
+  onDelete,
+  compact = false,
+}) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const skillCount = profile?.parsedData?.skills?.length ?? profile?.skills?.length ?? 0;
   const name = profile?.parsedData?.personalInfo?.fullName || profile?.name || 'Candidate';
 
@@ -12,6 +21,57 @@ export function ProfileSection({ profile, loading, onUpload, onClear, compact = 
     if (file) onUpload(file);
     e.target.value = '';
   };
+
+  const deleteControls = (
+    <>
+      {confirmDelete ? (
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(false)}
+            disabled={loading}
+            className="text-[10px] text-slate-400 hover:text-slate-200 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            data-testid="confirm-delete-profile"
+            onClick={async () => {
+              setConfirmDelete(false);
+              await onDelete?.();
+            }}
+            disabled={loading || !onDelete}
+            className="text-[10px] text-red-400 hover:text-red-300 font-medium disabled:opacity-50"
+          >
+            Yes, delete
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={onClear}
+            disabled={loading}
+            className="text-[10px] text-slate-500 hover:text-slate-300 disabled:opacity-50"
+          >
+            {skillCount === 0 && !compact ? 'Re-upload' : 'Clear'}
+          </button>
+          {onDelete ? (
+            <button
+              type="button"
+              data-testid="delete-profile"
+              onClick={() => setConfirmDelete(true)}
+              disabled={loading}
+              className="text-[10px] text-red-400/90 hover:text-red-300 disabled:opacity-50"
+            >
+              Delete
+            </button>
+          ) : null}
+        </div>
+      )}
+    </>
+  );
 
   if (compact && profile) {
     return (
@@ -22,14 +82,7 @@ export function ProfileSection({ profile, loading, onUpload, onClear, compact = 
             <span className="text-slate-500"> · {skillCount} skills</span>
           ) : null}
         </p>
-        <button
-          type="button"
-          onClick={onClear}
-          disabled={loading}
-          className="text-[10px] text-slate-500 hover:text-slate-300 shrink-0 disabled:opacity-50"
-        >
-          Clear
-        </button>
+        {deleteControls}
       </div>
     );
   }
@@ -77,16 +130,14 @@ export function ProfileSection({ profile, loading, onUpload, onClear, compact = 
                 {skillCount > 0 ? `${skillCount} skills parsed` : 'No skills found — re-upload'}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={onClear}
-              disabled={loading}
-              className="text-[11px] text-indigo-400 hover:text-indigo-300 disabled:opacity-50 shrink-0"
-            >
-              {skillCount === 0 ? 'Re-upload' : 'Clear'}
-            </button>
+            {deleteControls}
           </div>
-          {skillCount === 0 && (
+          {confirmDelete && (
+            <p className="text-[10px] text-red-300/90 mt-2 leading-relaxed">
+              Permanently removes this resume and match history from the local database.
+            </p>
+          )}
+          {skillCount === 0 && !confirmDelete && (
             <p className="text-[11px] text-amber-300/80 mt-2 leading-relaxed">
               Re-upload so autofill has skills and work history to draft from.
             </p>

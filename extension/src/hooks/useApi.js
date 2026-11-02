@@ -38,5 +38,24 @@ export function useApi() {
     }
   }, []);
 
-  return { loading, error, uploadResume, checkBackend, clearError };
+  /** Permanently delete profile (+ matches) on the local backend. */
+  const deleteProfile = useCallback(async (id) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_BASE}/profile/${id}`, { method: 'DELETE' });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.success === false) {
+        throw new Error(result.error || 'Delete failed');
+      }
+      return true;
+    } catch (err) {
+      setError(err.message || 'Failed to delete profile');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { loading, error, uploadResume, deleteProfile, checkBackend, clearError };
 }

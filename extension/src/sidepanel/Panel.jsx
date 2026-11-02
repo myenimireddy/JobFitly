@@ -46,7 +46,7 @@ export function Panel() {
   const [showCapture, setShowCapture] = useState(false);
   /** Last http(s) tab in this window — Fill Form target when Side Panel is not native. */
   const [jobTabId, setJobTabId] = useState(null);
-  const { loading, error, uploadResume, checkBackend, clearError } = useApi();
+  const { loading, error, uploadResume, deleteProfile, checkBackend, clearError } = useApi();
   const version = chrome.runtime.getManifest().version;
   const captureComplete = !!profile?.parsedData?.applicationProfile?.captureComplete;
 
@@ -180,6 +180,23 @@ export function Panel() {
     clearError();
   }, [clearError, syncProfileIdToPage]);
 
+  const handleDelete = useCallback(async () => {
+    const id = profile?.id;
+    clearError();
+    if (id) {
+      try {
+        await deleteProfile(id);
+      } catch {
+        // Error banner via useApi; keep profile visible so user can retry.
+        return;
+      }
+    }
+    setProfile(null);
+    setShowCapture(false);
+    await clearProfileId();
+    await syncProfileIdToPage(null);
+  }, [profile?.id, deleteProfile, clearError, syncProfileIdToPage]);
+
   const displayError = error || (!backendOnline ? 'Backend offline — run make dev-backend' : null);
 
   return (
@@ -222,9 +239,10 @@ export function Panel() {
         <div className={fillActive ? 'opacity-70' : ''}>
           <ProfileSection
             profile={profile}
-            loading={loading && loadingText.toLowerCase().includes('upload')}
+            loading={loading}
             onUpload={handleUpload}
             onClear={handleClear}
+            onDelete={handleDelete}
             compact={fillActive}
           />
           {/* data-testid for Playwright extension-UI e2e */}
