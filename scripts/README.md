@@ -1,18 +1,39 @@
 # Scripts
 
-Small repo-level checks used by `make` and git hooks. Not part of the runtime product.
+| Script | Who | Purpose |
+|--------|-----|---------|
+| [`bootstrap.sh`](bootstrap.sh) | Beta testers | One-time install of missing tools + project setup (**no `make`**) |
+| [`start.sh`](start.sh) | Beta testers | Everyday: start API (+ Ollama only if no Groq key) |
+| `check-stack.js` | Devs / pre-commit | Guards against revived dead files / renamed UI pieces |
 
-| Script | Purpose |
-|--------|---------|
-| `check-stack.js` | Guards against revived dead files / renamed UI pieces; asserts Makefile + hook wiring stay sane |
+## Beta testers
 
-## Usage
+`make` is **not** installed by default on a fresh Mac (needs Xcode CLT). Use the shell scripts instead:
 
 ```bash
-# from repo root
-node scripts/check-stack.js
-# also runs as the first step of:
-make test-fast
+chmod +x scripts/bootstrap.sh scripts/start.sh
+./scripts/bootstrap.sh   # once
+./scripts/start.sh       # every day
 ```
 
-When you rename or remove a core UI/module, update the assertions in `check-stack.js` so the fast gate still matches reality.
+Full steps: [../BETA_SETUP.md](../BETA_SETUP.md)
+
+Skip Ollama during bootstrap if you will paste a Groq key in Settings:
+
+```bash
+INSTALL_OLLAMA=no ./scripts/bootstrap.sh
+```
+
+Force Ollama install (non-interactive):
+
+```bash
+INSTALL_OLLAMA=yes ./scripts/bootstrap.sh
+```
+
+## Dev check
+
+```bash
+node scripts/check-stack.js   # also via make test-fast / pre-commit
+```
+
+When you rename or remove a core UI/module, update the assertions in `check-stack.js`.

@@ -173,7 +173,20 @@ export function SettingsPanel({ open, onClose, onSaved }) {
             </button>
           </div>
           <p className="text-[10px] text-slate-600 leading-snug">
-            Groq sends sanitized prompts to the cloud. Ollama keeps everything on this machine.
+            JobFitly does <span className="text-slate-400">not</span> upload your profile to our servers.
+            Data stays in your local backend. With Groq: contact PII (name, email, phone, …) is
+            replaced with placeholders before Analyze / Ask AI. Resume parse prefers local Ollama
+            when available. Ollama keeps prompts on this machine entirely.
+          </p>
+        </section>
+
+        <section className="rounded-lg border border-slate-700/80 bg-slate-900/40 px-3 py-2.5">
+          <h3 className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+            Privacy goal
+          </h3>
+          <p className="text-[11px] text-slate-500 leading-snug">
+            We aim to avoid storing or sharing personal data beyond this device. Prefer Ollama if you
+            want zero cloud LLM traffic. Never paste API keys into GitHub issues.
           </p>
         </section>
 

@@ -10,8 +10,39 @@
  */
 
 const LLMFactory = require('../llm/factory');
+const OllamaLLM = require('../llm/ollama');
+const { resolveLlmRuntime } = require('./llmSettings');
+const { scrubContactStrings } = require('./piiSanitizer');
 
 const PARSE_TIMEOUT_MS = 10 * 60 * 1000;
+
+/**
+ * Prefer local Ollama for resume parse only when it is actually reachable.
+ * isConfigured() alone is not enough (base URL always set) — probe the host.
+ * Fall back to Groq with contacts scrubbed when Ollama is down.
+ */
+async function createParseLlm() {
+  const runtime = resolveLlmRuntime();
+  if (runtime.provider === 'groq') {
+    const base = runtime.ollamaBaseUrl || 'http://localhost:11434';
+    try {
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 1500);
+      const res = await fetch(base, { signal: controller.signal });
+      clearTimeout(t);
+      if (res.ok || res.status === 200) {
+        const ollama = new OllamaLLM();
+        console.log('[llmParser] Using local Ollama for resume parse (privacy)');
+        return { llm: ollama, cloud: false };
+      }
+    } catch {
+      /* Ollama not running */
+    }
+    console.warn('[llmParser] Ollama unavailable — resume parse will use Groq with contacts scrubbed');
+    return { llm: LLMFactory.create(), cloud: true };
+  }
+  return { llm: LLMFactory.create(), cloud: false };
+}
 
 const SYSTEM_PROMPT = `You are an expert resume parser. Extract structured information from the raw resume text provided.
 
@@ -151,8 +182,9 @@ function isCompleteParse(parsed) {
 
 async function parseResumeWithLLM(rawText) {
   let llm;
+  let cloud = false;
   try {
-    llm = LLMFactory.create();
+    ({ llm, cloud } = await createParseLlm());
   } catch (err) {
     console.warn(`[llmParser] LLM not available: ${err.message}`);
     return null;
@@ -160,9 +192,13 @@ async function parseResumeWithLLM(rawText) {
 
   try {
     async function onePass() {
+      // Cloud path: strip emails/phones. Name/school may still appear (needed to fill local profile).
+      const textForLlm = cloud
+        ? scrubContactStrings(String(rawText).slice(0, 12000))
+        : String(rawText).slice(0, 12000);
       const raw = await llm.extract(
         SYSTEM_PROMPT,
-        `Parse this entire resume into the JSON structure. Include every job (title AND company), every bullet, school, and skill.\n\n${String(rawText).slice(0, 12000)}`,
+        `Parse this entire resume into the JSON structure. Include every job (title AND company), every bullet, school, and skill.\n\n${textForLlm}`,
         PARSE_TIMEOUT_MS,
       );
       const parsed = JSON.parse(

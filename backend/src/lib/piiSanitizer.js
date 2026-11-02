@@ -70,15 +70,22 @@ function sanitizeProfile(parsedProfile) {
       .map(a => scrubInlineContacts(a, restore)),
   }));
 
+  const summaryRaw = pi.summary || parsedProfile.summary;
+  // Keep match/doc signals that are not contact PII.
+  sanitizedPersonalInfo.summary = summaryRaw
+    ? scrubInlineContacts(summaryRaw, restore)
+    : undefined;
+
   return {
     sanitized: {
       personalInfo:   sanitizedPersonalInfo,
       skills:         parsedProfile.skills || [],
       workExperience: sanitizedWork,
       education:      parsedProfile.education || [],
-      summary:        parsedProfile.summary
-        ? scrubInlineContacts(parsedProfile.summary, restore)
-        : undefined,
+      certifications: parsedProfile.certifications || [],
+      sponsorshipRequired: parsedProfile.sponsorshipRequired,
+      clearance:      parsedProfile.clearance,
+      summary:        sanitizedPersonalInfo.summary,
     },
     restore,
   };
@@ -140,12 +147,45 @@ function restoreAnswers(answers, restore, originalProfile) {
 }
 
 /**
- * Returns true when the configured LLM provider sends data off-device.
- * Used to decide whether to warn the user.
+ * Restore placeholders inside a free-text string (cover letter, bullets, …).
  */
-function isCloudProvider(config) {
-  const provider = (config.llmProvider || 'ollama').toLowerCase();
-  return provider !== 'ollama';
+function restoreText(text, restore) {
+  if (!text || !restore || !restore.size) return text;
+  let out = String(text);
+  for (const [placeholder, real] of restore) {
+    out = out.split(placeholder).join(real);
+  }
+  return out;
 }
 
-module.exports = { sanitizeProfile, restoreAnswers, isCloudProvider };
+/**
+ * Returns true when the *effective* LLM sends data off-device (Groq).
+ */
+function isCloudProvider() {
+  try {
+    const { resolveLlmRuntime } = require('./llmSettings');
+    return resolveLlmRuntime().provider === 'groq';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Strip emails / phones from free text before a cloud LLM sees it
+ * (e.g. resume parse fallback when Ollama is unavailable).
+ */
+function scrubContactStrings(text) {
+  if (!text) return text;
+  return String(text)
+    .replace(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, '[CANDIDATE_EMAIL]')
+    .replace(/(\+?1?\s?)?(\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4})/g, '[CANDIDATE_PHONE]');
+}
+
+module.exports = {
+  sanitizeProfile,
+  restoreAnswers,
+  restoreText,
+  isCloudProvider,
+  scrubContactStrings,
+  PLACEHOLDER,
+};

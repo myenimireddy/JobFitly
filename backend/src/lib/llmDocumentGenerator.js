@@ -6,6 +6,7 @@
  */
 
 const LLMFactory = require('../llm/factory');
+const { sanitizeProfile, restoreText } = require('./piiSanitizer');
 
 const RESUME_SYSTEM_PROMPT = `You are an expert resume writer and career coach.
 
@@ -72,7 +73,8 @@ async function generateTailoredResume(profile, job) {
     return null;
   }
 
-  const profileSummary = buildProfileSummary(profile);
+  const { sanitized, restore } = sanitizeProfile(profile);
+  const profileSummary = buildProfileSummary(sanitized);
   const jobSummary = buildJobSummary(job);
 
   const userPrompt = `Generate tailored resume content for this candidate applying to the job below.
@@ -86,9 +88,22 @@ ${jobSummary}`;
   try {
     const raw = await llm.extract(RESUME_SYSTEM_PROMPT, userPrompt);
     const result = parseJSON(raw);
-    result.tailoredBullets = Array.isArray(result.tailoredBullets) ? result.tailoredBullets : [];
-    result.keywordsToAdd = toStringArray(result.keywordsToAdd);
-    result.skillsToHighlight = toStringArray(result.skillsToHighlight);
+    result.tailoredBullets = Array.isArray(result.tailoredBullets)
+      ? result.tailoredBullets.map((b) => {
+          if (!b || typeof b !== 'object') return { tailored: restoreText(b, restore) };
+          return {
+            ...b,
+            original: restoreText(b.original, restore),
+            tailored: restoreText(b.tailored, restore),
+            reason: restoreText(b.reason, restore),
+            section: restoreText(b.section, restore),
+          };
+        })
+      : [];
+    result.keywordsToAdd = toStringArray(result.keywordsToAdd).map((k) => restoreText(k, restore));
+    result.skillsToHighlight = toStringArray(result.skillsToHighlight).map((k) => restoreText(k, restore));
+    if (result.summaryStatement) result.summaryStatement = restoreText(result.summaryStatement, restore);
+    if (result.summary) result.summary = restoreText(result.summary, restore);
     console.log(`[llmDocGen] Resume bullets: ${result.tailoredBullets.length}, keywords: ${result.keywordsToAdd.length}`);
     return result;
   } catch (err) {
@@ -106,7 +121,8 @@ async function generateCoverLetter(profile, job) {
     return null;
   }
 
-  const profileSummary = buildProfileSummary(profile);
+  const { sanitized, restore } = sanitizeProfile(profile);
+  const profileSummary = buildProfileSummary(sanitized);
   const jobSummary = buildJobSummary(job);
 
   const userPrompt = `Write a tailored cover letter for this candidate applying to the job below.
@@ -120,7 +136,8 @@ ${jobSummary}`;
   try {
     const raw = await llm.extract(COVER_LETTER_SYSTEM_PROMPT, userPrompt);
     const result = parseJSON(raw);
-    result.highlights = toStringArray(result.highlights);
+    if (result.coverLetter) result.coverLetter = restoreText(result.coverLetter, restore);
+    result.highlights = toStringArray(result.highlights).map((h) => restoreText(h, restore));
     console.log(`[llmDocGen] Cover letter generated (${result.coverLetter?.length || 0} chars)`);
     return result;
   } catch (err) {

@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Beta setup guide
+    url: https://github.com/myenimireddy/JobFitly/blob/main/BETA_SETUP.md
+    about: First-time install and everyday start steps for testers
