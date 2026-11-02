@@ -31,7 +31,7 @@ Order (see `src/lib/llmSettings.js`):
 
 UI-saved keys live in `data/llm-settings.json` (gitignored). Never commit that file.
 
-Cloud prompts must go through `src/lib/piiSanitizer.js` (placeholders → restore).
+**Privacy:** Profiles live in local SQLite only (no JobFitly cloud store). Cloud prompts (Groq) must go through `src/lib/piiSanitizer.js` (placeholders → restore). Resume parse prefers Ollama when Groq is selected — see `llmResumeParser.js`.
 
 ## Commands
 

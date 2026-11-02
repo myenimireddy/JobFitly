@@ -6,7 +6,7 @@
 
 **AI-powered job application assistant** — analyze job fit, match your skills, and autofill applications directly from your browser.
 
-> All AI processing runs **locally** via [Ollama](https://ollama.com) — your resume and personal data never leave your machine.
+> **Privacy goal:** Your profile stays on **your machine** — JobFitly does not host a cloud copy. Default AI is local [Ollama](https://ollama.com). Optional **Groq** (Settings) speeds Analyze / Ask AI using **sanitized** prompts (contact PII → placeholders). Resume parse prefers Ollama when available.
 
 ---
 
@@ -26,7 +26,20 @@
 
 ## Running the Application
 
-### First-time setup (do this once)
+**Beta testers (simplest path):** see **[BETA_SETUP.md](BETA_SETUP.md)** — two scripts, no `make` required:
+
+```bash
+./scripts/bootstrap.sh   # first time only
+./scripts/start.sh       # every day
+```
+
+Then load `extension/dist` in Chrome and paste a Groq key in Settings (recommended).
+
+---
+
+### First-time setup for developers (`make`)
+
+`make` is **not** on a stock Mac until Xcode Command Line Tools are installed. Prefer the scripts above for testers.
 
 ```bash
 git clone https://github.com/myenimireddy/JobFitly.git
@@ -141,15 +154,16 @@ cd backend && npm install
 
 The autofill engine includes **portal-specific parsers** for accurate field detection and injection on each ATS.
 
-| Portal | Domain | Fields Supported |
-|--------|--------|-----------------|
-| **Lever** | `jobs.lever.co` | Text inputs, email, phone, location, radio (multiple choice), dropdowns, textareas |
-| **Greenhouse** | `boards.greenhouse.io` | Text inputs, radio groups, checkboxes, selects, textareas |
-| **Workday** | `*.myworkdayjobs.com` | Native inputs, custom select widgets (click-to-open), radio groups, textareas |
-| **LinkedIn Easy Apply** | `linkedin.com` | Text inputs, selects, radio fieldsets, textareas |
-| **Generic** | Any site | Standard `<input>`, `<textarea>`, `<select>` matched via `label[for]`, `aria-label`, placeholder |
+| Portal | Domain | Notes |
+|--------|--------|--------|
+| **Lever** | `jobs.lever.co` | Dedicated scrape/inject |
+| **Greenhouse** | `boards.greenhouse.io`, `job-boards.greenhouse.io` | Classic + Job Board (React-Select) |
+| **Workday** | `*.myworkdayjobs.com` | Native + custom selects; indexed work experience |
+| **Ashby** | `jobs.ashbyhq.com` | Dedicated scrape/inject |
+| **Generic** | Any site | Standard `<input>` / `<textarea>` / `<select>` via label / aria / placeholder |
 
-> **Portal not listed?** The Generic parser works on any standard HTML form. For best results on a specific ATS, [open a request](#contact--support).
+> **LinkedIn:** job-text extract for **Analyze** only — not a first-class Easy Apply autofill portal.  
+> **Portal not listed?** Generic covers many HTML forms; [open an issue](https://github.com/myenimireddy/JobFitly/issues/new/choose) for ATS-specific support.
 
 ---
 
@@ -282,7 +296,7 @@ GROQ_API_KEY=gsk_your_key_here
 GROQ_MODEL=llama3-70b-8192
 ```
 
-> **Privacy note:** Cloud prompts run through `piiSanitizer` (placeholders → restore). Prefer the Settings UI for beta users so they own their key.
+> **Privacy note:** JobFitly does not store your resume on our servers. Groq requests for Analyze / Ask AI go through `piiSanitizer` (name/email/phone/… → placeholders, restored locally). Resume upload prefers local Ollama even when Groq is on. Prefer the Settings UI so testers own their key. Use **Use Ollama** for zero cloud LLM traffic.
 
 ### LLM status indicator
 
@@ -324,7 +338,8 @@ See [`.cursor/skills/jobfitly-dev/`](.cursor/skills/jobfitly-dev/) for the full 
 
 ## Contact & Support
 
-- **Bug reports & feature requests:** [Open an issue](https://github.com/myenimireddy/JobFitly/issues)
+- **Bug reports & feature requests:** [Open an issue](https://github.com/myenimireddy/JobFitly/issues/new/choose)
+- **What to include:** see [BETA_SETUP.md — How to report an issue](BETA_SETUP.md#e-how-to-report-an-issue) (OS, Chrome, extension version, job URL, steps, no API keys / PII)
 
 ---
 

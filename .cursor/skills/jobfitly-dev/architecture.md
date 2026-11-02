@@ -6,12 +6,14 @@
 |--------|----------------|
 | `modules/profile/` | Upload, parse, editor payload, `applicationFields` catalog/merge |
 | `modules/autofill/` | `logic.js` planner + `service.js` LLM generate / save answers |
-| `modules/match/` | Deterministic skill fit (no LLM) |
-| `modules/job/` | Job posting CRUD |
-| `modules/documents/` | Stored docs |
-| `llm/` | Provider factory (Ollama / Groq) |
-| `lib/piiSanitizer.js` | Placeholder swap for cloud providers |
-| `lib/llmResumeParser.js` | Structured resume extraction |
+| `modules/match/` | Heuristic fit + optional LLM narrative (`llmMatchAnalyzer`) |
+| `modules/job/` | Job posting CRUD / extract |
+| `modules/settings/` | `GET/PUT /api/settings/llm` (Groq key; never full key in responses) |
+| `modules/documents/` | Tailored resume / cover letter API (web only — not extension) |
+| `llm/` | Factory → Groq or Ollama via `lib/llmSettings.resolveLlmRuntime()` |
+| `lib/llmSettings.js` | Settings file + env key resolution / `forceOllama` |
+| `lib/piiSanitizer.js` | Placeholder swap + restore for cloud providers |
+| `lib/llmResumeParser.js` | Structured resume extraction (prefer reachable Ollama) |
 | `lib/resumeSections.js` | Section helpers for parse |
 
 Profile JSON (SQLite via Prisma) roughly:
@@ -41,7 +43,10 @@ parsedData: {
 | `portals/greenhouseJobBoard.js` | GH boards React-Select / consent / dial-safe options |
 | `sidepanel/` | Primary UI — Chrome Side Panel (stays open during HITL) |
 | `popup/AutofillSection.jsx` | Generate → ordered one-by-one fill → HITL ask / Ask AI |
+| `popup/MatchSection.jsx` | Analyze job fit on active tab (abort on Cancel) |
+| `popup/SettingsPanel.jsx` | Groq key / Use Ollama |
 | `popup/Popup.jsx` | Re-exports Panel for legacy imports |
+| `lib/contentBridge.js` | Ensure content script + messaging helpers |
 | `background.js` | `sidePanel.setPanelBehavior({ openPanelOnActionClick: true })` |
 
 Legacy `parsers/` directory may be empty; **live path is PortalEngine + portals/**.

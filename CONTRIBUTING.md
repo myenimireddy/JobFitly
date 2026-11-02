@@ -16,6 +16,10 @@ Deeper agent guidance: [`.cursor/skills/jobfitly-dev/`](.cursor/skills/jobfitly-
 
 ## Setup
 
+**Beta / non-dev testers:** follow [BETA_SETUP.md](BETA_SETUP.md) (`./scripts/bootstrap.sh` then `./scripts/start.sh`). No `make` required.
+
+**Developers:**
+
 ```bash
 make install && make setup
 brew install ollama && ollama pull llama3.2   # or use a Groq key in Settings / .env
@@ -49,6 +53,8 @@ Load `extension/dist/` unpacked on `chrome://extensions` (Developer mode).
 - [ ] Extension rebuilt if shippable UI/DOM changed
 - [ ] No secrets / `llm-settings.json` / real resumes committed
 
-## Questions
+## Questions / bugs
 
-Open a GitHub issue with the portal URL, expected vs actual behavior, and extension version from the Side Panel header.
+Use the GitHub **Bug report** template: https://github.com/myenimireddy/JobFitly/issues/new/choose  
+
+Include OS, Chrome version, Side Panel version, LLM (Groq/Ollama), job URL, steps, expected vs actual. No API keys or real PII — see [BETA_SETUP.md](BETA_SETUP.md#e-how-to-report-an-issue).

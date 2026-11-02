@@ -1,0 +1,119 @@
+name: Bug report
+description: Something broke while using JobFitly (setup, Analyze, Fill Form, Settings)
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping. **Do not paste API keys, passwords, or your real resume.**
+        Use a mock profile or redact name / email / phone in screenshots.
+
+        JobFitly keeps profiles on your machine only. Reports should never include PII we could store.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where did it break?
+      options:
+        - Setup / bootstrap / start
+        - Extension load / icon / Side Panel
+        - Settings / Groq key
+        - Resume upload / profile
+        - Analyze job fit
+        - Fill Form / Ask AI / inject
+        - Backend offline / LLM offline
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: "e.g. macOS 15.1 / Windows 11 + WSL"
+    validations:
+      required: true
+
+  - type: input
+    id: chrome
+    attributes:
+      label: Chrome version
+      description: chrome://version → first line
+      placeholder: "e.g. 131.0.6778.86"
+    validations:
+      required: true
+
+  - type: input
+    id: extension_version
+    attributes:
+      label: JobFitly version
+      description: Side Panel header (e.g. v1.2.5) or chrome://extensions
+    validations:
+      required: true
+
+  - type: dropdown
+    id: llm
+    attributes:
+      label: LLM in use
+      options:
+        - Groq (Settings or .env key)
+        - Ollama (local)
+        - Unknown / offline
+    validations:
+      required: true
+
+  - type: input
+    id: job_url
+    attributes:
+      label: Job / application URL (if relevant)
+      description: Public posting or ATS URL. Redact query tokens if they look secret.
+      placeholder: "https://boards.greenhouse.io/..."
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered list. What you clicked, in order.
+      placeholder: |
+        1. Opened …
+        2. Clicked Analyze …
+        3. …
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual
+      description: What happened instead (error text, wrong field, hang, etc.)
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / errors (optional)
+      description: |
+        Backend terminal lines, or Chrome DevTools → Console on the job page / Side Panel.
+        Redact keys and PII.
+      render: shell
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Before submitting
+      options:
+        - label: I ran `./scripts/start.sh` (or backend is online)
+          required: false
+        - label: I reloaded the extension after rebuilding (if I changed code)
+          required: false
+        - label: No API keys or real PII in this report
+          required: true

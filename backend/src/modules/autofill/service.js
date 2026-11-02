@@ -79,7 +79,7 @@ class AutofillService {
     const ready = planned.filter((x) => !x.plan.needsLLM);
     const needsLLM = planned.filter((x) => x.plan.needsLLM);
 
-    const cloud = isCloudProvider(config);
+    const cloud = isCloudProvider();
     let llmByLabel = new Map();
 
     if (needsLLM.length > 0) {

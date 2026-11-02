@@ -7,6 +7,7 @@
  */
 
 const LLMFactory = require('../llm/factory');
+const { sanitizeProfile } = require('./piiSanitizer');
 
 const SYSTEM_PROMPT = `You are an expert technical recruiter and career advisor analyzing a candidate's fit for a job.
 
@@ -95,8 +96,9 @@ async function analyzeMatchWithLLM(profile, job) {
     return null;
   }
 
-  // Build a concise profile summary (no PII beyond what's needed for match)
-  const profileSummary = buildProfileSummary(profile);
+  // Never send contact PII to the LLM (esp. Groq). Skills / roles / education stay.
+  const { sanitized } = sanitizeProfile(profile);
+  const profileSummary = buildProfileSummary(sanitized);
   const jobSummary = buildJobSummary(job);
 
   const userPrompt = `Analyze this candidate's fit for the job below.
@@ -195,6 +197,7 @@ function formatEducationLine(e) {
 }
 
 function buildProfileSummary(profile) {
+  // Expect a sanitized profile (placeholders for name/email/phone/location).
   const pi = profile.personalInfo || {};
   const exp = (profile.workExperience || []).map(w =>
     `- ${w.title} at ${w.company} (${w.startDate || '?'} – ${w.endDate || 'Present'})`
@@ -204,12 +207,12 @@ function buildProfileSummary(profile) {
     ? `${eduLines.join('\n')}\n(Education IS present on this profile — do not say it is missing.)`
     : 'None listed';
 
-  // Estimate total years of experience from work history
   const totalYears = estimateYearsOfExperience(profile.workExperience || []);
 
   return [
+    // Location is placeholder when sanitized — enough for remote/onsite fit, not street address.
     `Location: ${pi.location || 'Not specified'}`,
-    `Summary: ${pi.summary || 'Not provided'}`,
+    `Summary: ${pi.summary || profile.summary || 'Not provided'}`,
     `Total experience: ~${totalYears} years`,
     `Skills: ${(profile.skills || []).join(', ') || 'None listed'}`,
     `Work Experience:\n${exp || 'None listed'}`,
