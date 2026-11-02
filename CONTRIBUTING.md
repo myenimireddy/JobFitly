@@ -16,7 +16,7 @@ Deeper agent guidance: [`.cursor/skills/jobfitly-dev/`](.cursor/skills/jobfitly-
 
 ## Setup
 
-**Beta / non-dev testers:** follow [BETA_SETUP.md](BETA_SETUP.md) (`./scripts/bootstrap.sh` then `./scripts/start.sh`). No `make` required.
+**Beta / non-dev testers:** follow [docs/setup.md](docs/setup.md) (`./scripts/bootstrap.sh` then `./scripts/start.sh`). No `make` required.
 
 **Developers:**
 
@@ -57,4 +57,4 @@ Load `extension/dist/` unpacked on `chrome://extensions` (Developer mode).
 
 Use the GitHub **Bug report** template: https://github.com/myenimireddy/JobFitly/issues/new/choose  
 
-Include OS, Chrome version, Side Panel version, LLM (Groq/Ollama), job URL, steps, expected vs actual. No API keys or real PII — see [BETA_SETUP.md](BETA_SETUP.md#e-how-to-report-an-issue).
+Include OS, Chrome version, Side Panel version, LLM (Groq/Ollama), job URL, steps, expected vs actual. No API keys or real PII — see [docs/setup.md](docs/setup.md).

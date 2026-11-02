@@ -4,345 +4,54 @@
 ![Node](https://img.shields.io/badge/node-%3E%3D18-green.svg)
 ![Chrome Extension](https://img.shields.io/badge/chrome-extension-yellow.svg)
 
-**AI-powered job application assistant** — analyze job fit, match your skills, and autofill applications directly from your browser.
+<img src="docs/images/icon.png" alt="JobFitly" width="64" height="64" />
 
-> **Privacy goal:** Your profile stays on **your machine** — JobFitly does not host a cloud copy. Default AI is local [Ollama](https://ollama.com). Optional **Groq** (Settings) speeds Analyze / Ask AI using **sanitized** prompts (contact PII → placeholders). Resume parse prefers Ollama when available.
+**Score job fit from the tab you’re on, then fill applications one field at a time — with you in control.**
 
----
-
-## Features
-
-- **AI Resume Parsing** — Upload your PDF resume; the LLM extracts skills, experience, education, contact info, projects, certifications, languages, and more into a structured profile with a **parse confidence score**
-- **Profile Editor** — Review and correct every parsed field before it is used for matching or autofill
-- **Job Match Scoring** — Compares your profile against any job posting and returns a match score (0–100), matched skills, missing skills, blockers, and pros — **no LLM required for this step**
-- **Smart Recommendations** — AI-generated suggestions for closing skill gaps
-- **Browser Extension** — One-click job analysis on any job board; results appear instantly in the popup
-- **Autofill Applications** — Scrapes form fields from a job application page, sends them to the LLM with your resume context, and fills the form for you
-- **Session Sync** — Profile saved in the extension automatically syncs to the web app and vice versa
-- **Missing Answer Memory** — Answers you provide manually for unknown fields are stored in your profile and reused in future applications
-- **Privacy Protection** — PII (name, email, phone) is replaced with placeholders before any data reaches a cloud LLM and restored locally after; the LLM is explicitly instructed not to retain any personal data
+Your profile stays on your machine. Optional Groq speeds AI; contact PII is sanitized before cloud calls. See [docs/llm-and-privacy.md](docs/llm-and-privacy.md).
 
 ---
 
-## Running the Application
+## What it does
 
-**Beta testers (simplest path):** see **[BETA_SETUP.md](BETA_SETUP.md)** — two scripts, no `make` required:
+1. **Upload a resume** in the Chrome Side Panel  
+2. **Analyze** the open job posting → score, gaps, blockers  
+3. **Fill Form** one field at a time (review AI drafts; never auto-Submit)  
+4. **Settings** → paste a Groq key for speed, or stay on local Ollama  
+
+Works with Greenhouse, Lever, Workday, Ashby, plus a generic HTML fallback — details in [docs/portals.md](docs/portals.md).
+
+---
+
+## Quick setup
+
+**Beta testers (recommended):**
 
 ```bash
-./scripts/bootstrap.sh   # first time only
+./scripts/bootstrap.sh   # first time
 ./scripts/start.sh       # every day
 ```
 
-Then load `extension/dist` in Chrome and paste a Groq key in Settings (recommended).
+Then load `extension/dist` in Chrome (`chrome://extensions` → Developer mode → Load unpacked).
+
+Full steps, troubleshooting, and how to report bugs: **[docs/setup.md](docs/setup.md)**
+
+**Developers:** [docs/development.md](docs/development.md) · [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ---
 
-### First-time setup for developers (`make`)
-
-`make` is **not** on a stock Mac until Xcode Command Line Tools are installed. Prefer the scripts above for testers.
-
-```bash
-git clone https://github.com/myenimireddy/JobFitly.git
-cd JobFitly
-
-# 1. Install all dependencies
-make install
-
-# 2. Create .env and initialise the SQLite database
-make setup
-
-# 3. Install Ollama and pull the AI model (~2 GB, one-time download)
-brew install ollama
-ollama pull llama3.2
-```
-
----
-
-### Every time you develop (4 terminals)
-
-Open **4 separate terminal tabs/windows** and run one command in each:
-
-**Terminal 1 — Ollama LLM server**
-```bash
-make ollama
-# Starts the local AI server at http://localhost:11434
-# Keep this running — required for resume parsing and autofill
-```
-
-**Terminal 2 — Backend API**
-```bash
-make dev-backend
-# Starts Express API at http://localhost:3000
-# Auto-restarts on file changes (nodemon)
-```
-
-**Terminal 3 — Frontend web app**
-```bash
-make dev-frontend
-# Starts React app at http://localhost:5173
-# Open this in your browser
-```
-
-**Terminal 4 — Chrome Extension (watch mode)**
-```bash
-make dev-extension
-# Rebuilds extension/dist/ on every file change
-```
-
-> **Alternative:** Run `make dev` to start terminals 2, 3, and 4 together in one command.
-> Still run `make ollama` separately — it must stay in its own terminal.
-
----
-
-### Load the Chrome Extension
-
-After the first `make dev-extension` or `make build-extension`:
-
-1. Open **`chrome://extensions`** in Chrome
-2. Enable **Developer mode** (top-right toggle)
-3. Click **Load unpacked**
-4. Select the **`extension/dist/`** folder
-5. Pin the extension to your toolbar
-
-Click the JobFitly icon to open the **Side Panel** (not a popup). It stays open while you click fields on the application page — required for one-by-one review and Ask AI.
-
-> After any code change to the extension, the watch mode rebuilds automatically.
-> Click the **refresh icon** on `chrome://extensions` to reload it.
-
----
-
-### Verify everything is running
-
-| Service | URL | Expected |
-|---|---|---|
-| Backend API | `http://localhost:3000/health` | `{"success":true}` |
-| LLM status | `http://localhost:3000/api/llm/status` | `{"data":{"available":true,...}}` |
-| Frontend | `http://localhost:5173` | JobFitly web app |
-| Ollama | `http://localhost:11434` | `Ollama is running` |
-
-The web app header shows **green dots** for Backend and LLM when both are up.
-
----
-
-### Troubleshooting
-
-**Backend Offline in the UI**
-```bash
-# Check if port 3000 is stuck from a previous crash
-lsof -ti:3000 | xargs kill -9
-# Then restart: make dev-backend
-```
-
-**`model 'llama3.2' not found`**
-```bash
-ollama pull llama3.2
-```
-
-**`ollama.chat is not a function`** — stale node_modules
-```bash
-cd backend && npm install
-```
-
-**Extension not autofilling**
-- Rebuild: `make build-extension`
-- Reload on `chrome://extensions` (click the refresh icon)
-- Make sure backend is running at `localhost:3000`
-
----
-
-## Supported Job Portals
-
-The autofill engine includes **portal-specific parsers** for accurate field detection and injection on each ATS.
-
-| Portal | Domain | Notes |
-|--------|--------|--------|
-| **Lever** | `jobs.lever.co` | Dedicated scrape/inject |
-| **Greenhouse** | `boards.greenhouse.io`, `job-boards.greenhouse.io` | Classic + Job Board (React-Select) |
-| **Workday** | `*.myworkdayjobs.com` | Native + custom selects; indexed work experience |
-| **Ashby** | `jobs.ashbyhq.com` | Dedicated scrape/inject |
-| **Generic** | Any site | Standard `<input>` / `<textarea>` / `<select>` via label / aria / placeholder |
-
-> **LinkedIn:** job-text extract for **Analyze** only — not a first-class Easy Apply autofill portal.  
-> **Portal not listed?** Generic covers many HTML forms; [open an issue](https://github.com/myenimireddy/JobFitly/issues/new/choose) for ATS-specific support.
-
----
-
-## Project Structure
-
-Each product block has its own README for maintainers and contributors:
-
-| Block | Docs |
-|-------|------|
-| Backend API | [backend/README.md](backend/README.md) |
-| Web app | [frontend/README.md](frontend/README.md) |
-| Chrome extension | [extension/README.md](extension/README.md) |
-| Scripts / hooks | [scripts/README.md](scripts/README.md) · [.githooks/README.md](.githooks/README.md) |
-| How to contribute | [CONTRIBUTING.md](CONTRIBUTING.md) |
-
-```
-JobFitly/
-├── CONTRIBUTING.md
-├── backend/                      # Express API — see backend/README.md
-│   ├── src/modules/              # profile, job, match, autofill, settings, …
-│   ├── src/llm/                  # Groq / Ollama factory
-│   ├── src/lib/                  # parsers, PII sanitizer, llmSettings
-│   └── prisma/
-├── frontend/                     # React web app — see frontend/README.md
-├── extension/                    # Chrome MV3 Side Panel — see extension/README.md
-│   ├── src/sidepanel/            # Primary UI
-│   ├── src/popup/                # Shared sections (Match, Autofill, Settings)
-│   ├── src/portalEngine.js       # Scrape / inject
-│   ├── tests/                    # Offline mocks
-│   └── e2e/                      # Live Playwright
-├── scripts/                      # check-stack.js (fast gate)
-├── .githooks/                    # pre-commit → make test-fast
-└── Makefile
-```
-
----
-
-## Agent skills (AI-assisted development)
-
-For Cursor (and compatible) agents working on this repo, use the project skill:
-
-**[`.cursor/skills/jobfitly-dev/`](.cursor/skills/jobfitly-dev/)**
-
-| File | Purpose |
-|------|---------|
-| [`SKILL.md`](.cursor/skills/jobfitly-dev/SKILL.md) | Pipeline, where-to-edit map, hard rules, feature checklist |
-| [`architecture.md`](.cursor/skills/jobfitly-dev/architecture.md) | Module map, profile JSON shape, messaging |
-| [`autofill-pitfalls.md`](.cursor/skills/jobfitly-dev/autofill-pitfalls.md) | Greenhouse/React-Select, dial vs country, phone shape, HITL |
-
-Agents should load this skill when changing autofill, portals, application profile fields, resume parsing, or extension fill UX — so new work follows the same intent/bucket model and avoids known ATS footguns.
-
----
-
-## Environment Variables
-
-Copy `backend/.env.example` to `backend/.env` and configure:
-
-```env
-# Database (SQLite by default)
-DATABASE_URL="file:./dev.db"
-
-# Server
-PORT=3000
-NODE_ENV=development
-
-# LLM Provider: 'ollama' (local, default) or 'groq' (cloud)
-LLM_PROVIDER=ollama
-
-# Ollama (local) — install from https://ollama.com
-OLLAMA_MODEL=llama3.2
-OLLAMA_BASE_URL=http://localhost:11434
-
-# Groq (cloud, optional) — get key from https://console.groq.com
-GROQ_API_KEY=your_key_here
-GROQ_MODEL=llama3-70b-8192
-
-# CORS origin for the web frontend
-CORS_ORIGIN=http://localhost:5173
-```
-
----
-
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `make install` | Install all dependencies (backend + frontend + extension) |
-| `make setup` | Create `.env` and initialize SQLite database |
-| `make ollama` | Start Ollama LLM server on `localhost:11434` (run in a separate terminal) |
-| `make dev` | Start all services in dev mode (backend + frontend + extension watch) |
-| `make build-extension` | One-shot production build of the extension |
-| `make run` | Run production backend only |
-| `make test` | Run backend tests |
-| `make db-push` | Apply schema changes |
-| `make db-reset` | Reset database |
-| `make clean` | Remove all `node_modules` and `dist` folders |
-| `make help` | Show help |
-
----
-
-## LLM Setup
-
-JobFitly uses an LLM for **resume parsing**, **match narrative**, and **autofill drafts**. Heuristic match scoring still works without one.
-
-**Effective provider** (see `backend/src/lib/llmSettings.js`):
-
-1. Extension **Settings → Use Ollama** forces local even if a Groq key exists  
-2. Else a usable Groq key (Settings UI **or** `GROQ_API_KEY` in `.env`) → **Groq (fast)**  
-3. Else → **Ollama (local, slower)**
-
-### Option A — Ollama (local, free, private)
-
-```bash
-brew install ollama && ollama pull llama3.2
-make ollama   # keep this terminal open
-```
-
-```env
-OLLAMA_MODEL=llama3.2
-OLLAMA_BASE_URL=http://localhost:11434
-```
-
-### Option B — Groq (cloud, free tier)
-
-1. Create a key at [console.groq.com/keys](https://console.groq.com/keys)  
-2. Paste it in the extension **Settings (gear)**, *or* set:
-
-```env
-GROQ_API_KEY=gsk_your_key_here
-GROQ_MODEL=llama3-70b-8192
-```
-
-> **Privacy note:** JobFitly does not store your resume on our servers. Groq requests for Analyze / Ask AI go through `piiSanitizer` (name/email/phone/… → placeholders, restored locally). Resume upload prefers local Ollama even when Groq is on. Prefer the Settings UI so testers own their key. Use **Use Ollama** for zero cloud LLM traffic.
-
-### LLM status indicator
-
-The web app header shows live status dots:
-- 🟢 **Backend** — Express API is reachable
-- 🟢 **LLM (ollama)** — Ollama server is reachable and a model is loaded
-- 🔴 **LLM Offline** — hover to see the reason (e.g. *"Ollama is not running"*)
-
----
-
-## Resume Parsing & Confidence Score
-
-When you upload a resume the LLM parses it into a structured profile and returns a **parse confidence score** (0–100):
-
-| Score | Meaning |
-|---|---|
-| **80–100** | All key sections found and clearly structured |
-| **50–79** | Some sections missing or ambiguous — review recommended |
-| **< 50** | Major sections missing — manual correction needed |
-
-The banner on the profile card shows the score, what was missing, and a direct link to **Edit Profile** to fix anything.
-
-If the LLM is offline, parsing falls back to a regex engine — the banner switches to amber and flags that accuracy may be lower.
-
----
-
-## Adding a New Portal
-
-Prefer a module under `extension/src/portals/` (or a `PortalEngine.register(...)` block in `portalEngine.js`) that implements scrape + inject for that ATS. Greenhouse Job Board / React-Select belongs in `portals/greenhouseJobBoard.js`.
-
-1. Detect hostname / DOM fingerprint and return labeled fields (with types/options when cheap and safe).
-2. Inject by label without destroying React-managed menus (no bulk option scrape; no `.remove()` on select menus).
-3. Add an offline mock under `extension/tests/mocks/` when possible; put live URLs in `extension/e2e/portals.json`.
-4. Run `make build-extension` and reload unpacked `extension/dist` on `chrome://extensions`.
-
-See [`.cursor/skills/jobfitly-dev/`](.cursor/skills/jobfitly-dev/) for the full agent checklist.
-
----
-
-## Contact & Support
-
-- **Bug reports & feature requests:** [Open an issue](https://github.com/myenimireddy/JobFitly/issues/new/choose)
-- **What to include:** see [BETA_SETUP.md — How to report an issue](BETA_SETUP.md#e-how-to-report-an-issue) (OS, Chrome, extension version, job URL, steps, no API keys / PII)
+## Docs
+
+| Doc | Topic |
+|-----|--------|
+| [docs/setup.md](docs/setup.md) | Install & daily run |
+| [docs/development.md](docs/development.md) | Make, env, layout |
+| [docs/portals.md](docs/portals.md) | ATS support |
+| [docs/llm-and-privacy.md](docs/llm-and-privacy.md) | Groq / Ollama / PII |
+| [docs/README.md](docs/README.md) | Docs index |
 
 ---
 
 ## License
 
-MIT
+[MIT](LICENSE)

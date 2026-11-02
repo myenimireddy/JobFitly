@@ -16,7 +16,7 @@ chmod +x scripts/bootstrap.sh scripts/start.sh
 ./scripts/start.sh       # every day
 ```
 
-Full steps: [../BETA_SETUP.md](../BETA_SETUP.md)
+Full steps: [../docs/setup.md](../docs/setup.md)
 
 Skip Ollama during bootstrap if you will paste a Groq key in Settings:
 
