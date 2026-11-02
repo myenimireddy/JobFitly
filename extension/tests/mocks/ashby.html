@@ -23,10 +23,16 @@
       <input type="text" placeholder="Enter your full name">
     </div>
 
-    <!-- Email -->
+    <!-- Email (id matches live Ashby `_systemfield_email`) -->
     <div data-field-path="email">
       <div class="ashby-application-form-question-title">Email <span>*</span></div>
-      <input type="email" placeholder="you@example.com">
+      <input type="email" id="_systemfield_email" name="email" placeholder="you@example.com">
+    </div>
+
+    <!-- Phone -->
+    <div data-field-path="phone">
+      <div class="ashby-application-form-question-title">Phone</div>
+      <input type="tel" id="_systemfield_phone" name="phone" placeholder="+1 555-000-0000">
     </div>
 
     <!-- Yes/No Buttons -->
@@ -98,7 +104,7 @@
       }
     };
     
-    window.addEventListener('load', () => setTimeout(() => window.AshbyTest.run(), 500));
+    // Do not auto-run on load — pollutes UI e2e forms.
   </script>
 </body>
 </html>

@@ -90,14 +90,25 @@ async function run() {
     const n = filledCount(await PortalEngine.inject([
       { label: 'Email', answer: 'ada@example.com' },
       { label: 'Name', answer: 'Ada Lovelace' },
-      { label: 'Phone', answer: '5550001111' },
+      { label: 'Phone', answer: '0000001111' },
       { label: 'How did you hear about us?', answer: 'LinkedIn' },
       { label: 'Are you authorized to work in the US?', answer: 'Yes' },
     ]));
+    check(!!fields.find((f) => /^pronouns$/i.test(f.label)), 'lever: found Pronouns');
+    check(
+      !!fields.find((f) => /^pronouns$/i.test(f.label) && (f.options || []).includes('She/her')),
+      'lever: pronouns options include She/her',
+    );
+    const pronounsN = filledCount(await PortalEngine.inject([
+      { label: 'Pronouns', answer: 'She/her' },
+    ]));
+    check(pronounsN >= 1, 'lever: pronouns inject filled');
+    check(!!doc.querySelector('input[name="pronouns"][value="She/her"]:checked'), 'lever: She/her checked');
+
     check(n >= 4, `lever: inject filled ${n}`);
     check(doc.querySelector('input[name="email"]')?.value === 'ada@example.com', 'lever: email');
     check(doc.querySelector('input[name="name"]')?.value === 'Ada Lovelace', 'lever: name');
-    check(doc.querySelector('input[name="phone"]')?.value === '5550001111', 'lever: phone');
+    check(doc.querySelector('input[name="phone"]')?.value === '0000001111', 'lever: phone');
     check(/linkedin/i.test(doc.querySelector('select[name="source"]')?.selectedOptions?.[0]?.text || ''), 'lever: source select');
     check(!!doc.querySelector('input[name="workAuth"][value="yes"]:checked'), 'lever: work-auth radio');
   }
@@ -117,13 +128,16 @@ async function run() {
     const n = filledCount(await PortalEngine.inject([
       { label: 'Email', answer: 'ada@example.com' },
       { label: 'Full Name', answer: 'Ada Lovelace' },
-      { label: 'Phone Number', answer: '5550002222' },
+      { label: 'Phone Number', answer: '0000002222' },
       { label: 'LinkedIn URL', answer: 'https://linkedin.com/in/ada' },
     ]));
     check(n >= 3, `workday: inject filled ${n}`);
-    check(doc.querySelector('#email')?.value === 'ada@example.com', 'workday: email');
+    check(
+      (doc.querySelector('#emailAddress--emailAddress') || doc.querySelector('#email'))?.value === 'ada@example.com',
+      'workday: email',
+    );
     check(doc.querySelector('#fullName')?.value === 'Ada Lovelace', 'workday: name');
-    check(doc.querySelector('#phone')?.value === '5550002222', 'workday: phone');
+    check(doc.querySelector('#phone')?.value === '0000002222', 'workday: phone');
     check(doc.querySelector('#linkedin')?.value.includes('linkedin.com'), 'workday: linkedin');
   }
 

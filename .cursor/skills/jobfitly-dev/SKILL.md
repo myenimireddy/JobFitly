@@ -68,6 +68,7 @@ On-demand drafts still land in the HITL textarea for edit + Fill — they do not
 | New portal scrape/inject | `extension/src/portals/<name>.js` + register in `portalEngine.js` |
 | Greenhouse Job Board / React-Select | `portals/greenhouseJobBoard.js` only |
 | Fill UX / HITL | `popup/AutofillSection.jsx` + `sidepanel/Panel.jsx` (**Side Panel**, not transient popup) |
+| Post-upload application facts | Side Panel `popup/ApplicationProfileCapture.jsx` (same API as web `ApplicationProfileCapture`) → `PUT /api/profile/:id/application-profile` |
 | Job fit Analyze UI | `popup/MatchSection.jsx` (cancel must abort in-flight work) |
 | Groq / Ollama Settings UI | `popup/SettingsPanel.jsx` + `modules/settings/` + `lib/llmSettings.js` |
 | Resume parse | `lib/llmResumeParser.js` (prefer Ollama when reachable) |
@@ -107,7 +108,8 @@ make install && make setup
 make ollama                         # separate terminal (or Groq key in Settings)
 make dev-backend / make build-extension
 make test-fast                      # stack + Jest + offline mocks (pre-commit)
-cd extension && npm run test:e2e    # live portals (not in pre-commit)
+cd extension && npm run test:e2e    # live portals inject-only (not in pre-commit)
+cd extension && npm run test:e2e:ui # Side Panel upload → capture → Fill Form
 ```
 
 ## Hard rules

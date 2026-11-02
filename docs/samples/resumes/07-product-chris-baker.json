@@ -1,0 +1,58 @@
+{
+  "personalInfo": {
+    "fullName": "Chris Baker",
+    "firstName": "Chris",
+    "lastName": "Baker",
+    "email": "chris.baker@jobfitly.test",
+    "phone": "(000) 000-0007",
+    "location": "Denver, CO",
+    "linkedin": "https://www.linkedin.com/in/chrisbakerdemo"
+  },
+  "summary": "Product manager for B2B collaboration tools. Balances roadmap clarity, user research, and measurable outcomes.",
+  "skills": [
+    "Roadmapping",
+    "User research",
+    "Metrics",
+    "A/B testing",
+    "SQL",
+    "Jira"
+  ],
+  "workExperience": [
+    {
+      "title": "Product Manager",
+      "company": "Atlassian",
+      "dates": "Apr 2021 - Present | Denver, CO",
+      "achievements": [
+        "Owned a workflow automation surface used by mid-market teams.",
+        "Ran research sprints that reframed onboarding and improved activation.",
+        "Defined north-star and input metrics; ran A/B tests with data science."
+      ]
+    },
+    {
+      "title": "Associate PM",
+      "company": "Twilio",
+      "dates": "Jun 2018 - Mar 2021 | Remote",
+      "achievements": [
+        "Shipped developer console improvements based on support ticket themes.",
+        "Wrote crisp PRDs and kept eng/design aligned on weekly goals."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "MBA, Product Management focus",
+      "school": "University of Colorado Boulder",
+      "dates": "2016 - 2018",
+      "note": ""
+    }
+  ],
+  "extras": [
+    "Work authorization: U.S. (demo)",
+    "Open to: Denver hybrid or remote PM"
+  ],
+  "_meta": {
+    "key": "product",
+    "fictional": true,
+    "purpose": "JobFitly demo / test only"
+  }
+}

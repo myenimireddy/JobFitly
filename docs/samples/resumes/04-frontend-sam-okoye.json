@@ -1,0 +1,58 @@
+{
+  "personalInfo": {
+    "fullName": "Sam Okoye",
+    "firstName": "Sam",
+    "lastName": "Okoye",
+    "email": "sam.okoye@jobfitly.test",
+    "phone": "(000) 000-0004",
+    "location": "New York, NY",
+    "linkedin": "https://www.linkedin.com/in/samokoyedemo"
+  },
+  "summary": "Frontend engineer obsessed with accessible, fast UI. Deep React/TypeScript experience and design-system collaboration.",
+  "skills": [
+    "React",
+    "TypeScript",
+    "CSS",
+    "Accessibility",
+    "Vite",
+    "Storybook"
+  ],
+  "workExperience": [
+    {
+      "title": "Frontend Engineer",
+      "company": "Figma",
+      "dates": "May 2021 - Present | New York, NY",
+      "achievements": [
+        "Shipped editor chrome improvements with focus on keyboard and screen readers.",
+        "Built Storybook coverage for shared components used across products.",
+        "Partnered with design to tighten spacing and motion tokens."
+      ]
+    },
+    {
+      "title": "UI Engineer",
+      "company": "Etsy",
+      "dates": "Jul 2018 - Apr 2021 | Brooklyn, NY",
+      "achievements": [
+        "Owned seller settings UI; improved Core Web Vitals on key pages.",
+        "Introduced Vite for faster local frontend builds."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "B.S. Interactive Media",
+      "school": "New York University",
+      "dates": "2014 - 2018",
+      "note": ""
+    }
+  ],
+  "extras": [
+    "Work authorization: U.S. (demo)",
+    "Open to: NYC hybrid or remote"
+  ],
+  "_meta": {
+    "key": "frontend",
+    "fictional": true,
+    "purpose": "JobFitly demo / test only"
+  }
+}

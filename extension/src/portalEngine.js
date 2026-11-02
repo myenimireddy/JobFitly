@@ -32,12 +32,27 @@ function cleanLabel(el) {
     .trim();
 }
 
-function setNativeValue(el, value) {
+/** Scroll + focus the live field being filled; stamp label for e2e assertions. */
+function focusFilledField(el, label) {
+  if (!el) return;
+  try {
+    el.scrollIntoView?.({ block: 'center', inline: 'nearest' });
+    if (typeof el.focus === 'function') el.focus({ preventScroll: true });
+    const root = el.ownerDocument?.documentElement;
+    if (root) {
+      root.dataset.jobfitlyActiveLabel = String(label || '').slice(0, 200);
+      root.dataset.jobfitlyActiveAt = String(Date.now());
+    }
+  } catch { /* ignore */ }
+}
+
+function setNativeValue(el, value, label = '') {
   const proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
   const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
   if (setter) setter.call(el, value); else el.value = value;
   el.dispatchEvent(new Event('input', { bubbles: true }));
   el.dispatchEvent(new Event('change', { bubbles: true }));
+  focusFilledField(el, label);
 }
 
 function labelTokens(s) {
@@ -351,6 +366,33 @@ const PortalEngine = {
     return scrapeReactSelectOptions(doc, best);
   },
 
+  /**
+   * Scroll/focus the control matching `label` before inject (HITL pacing + e2e).
+   */
+  async focusLabel(label) {
+    const { doc } = page();
+    if (!label) return false;
+    const nodes = [
+      ...doc.querySelectorAll(
+        'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="file"]), textarea, select',
+      ),
+    ];
+    let best = null;
+    let bestScore = 0;
+    for (const el of nodes) {
+      const l = fieldLabel(doc, el) || el.getAttribute('aria-label') || el.placeholder || el.name || '';
+      const score = labelMatchScore(l, label);
+      if (score > bestScore) {
+        bestScore = score;
+        best = el;
+      }
+    }
+    if (!best || bestScore <= 0) return false;
+    focusFilledField(best, label);
+    await sleep(60);
+    return true;
+  },
+
   async inject(answers, portalName = null) {
     const { doc } = page();
     const name = portalName || this.detect();
@@ -484,9 +526,6 @@ const PortalEngine = {
         if (!inputLabel || (!labelsMatch(inputLabel, label) && !consentish)) continue;
         if (/resume|cv|cover letter/i.test(inputLabel)) continue;
 
-        try {
-          input.scrollIntoView?.({ block: 'center', inline: 'nearest' });
-        } catch { /* ignore */ }
         await sleep(80);
 
         if (input.type === 'checkbox') {
@@ -496,6 +535,7 @@ const PortalEngine = {
             input.checked = true;
             input.dispatchEvent(new Event('change', { bubbles: true }));
           }
+          focusFilledField(input, label);
           filled++;
           break;
         }
@@ -505,6 +545,7 @@ const PortalEngine = {
             input.checked = true;
             input.dispatchEvent(new MouseEvent('click', { bubbles: true }));
             input.dispatchEvent(new Event('change', { bubbles: true }));
+            focusFilledField(input, label);
             filled++;
           }
           continue;
@@ -515,10 +556,11 @@ const PortalEngine = {
             input.value = hit.value;
             input.dispatchEvent(new Event('input', { bubbles: true }));
             input.dispatchEvent(new Event('change', { bubbles: true }));
+            focusFilledField(input, label);
             filled++;
           }
         } else {
-          setNativeValue(input, answer);
+          setNativeValue(input, answer, label);
           filled++;
         }
         break;
@@ -834,6 +876,19 @@ PortalEngine.register('workday', {
 
 // ── Portal: Lever ─────────────────────────────────────────────────────────────
 
+/** Lever checkbox UIs: EEO uses data-qa=checkboxes; pronouns use candidatePronounsCheckboxes. */
+function leverCheckboxList(fieldDiv) {
+  if (!fieldDiv) return null;
+  const explicit = fieldDiv.querySelector(
+    'ul[data-qa="checkboxes"], ul[data-qa="candidatePronounsCheckboxes"], ul#candidatePronounsCheckboxes',
+  );
+  if (explicit) return explicit;
+  // Fallback: any list with 2+ checkboxes (covers Lever markup drift).
+  return [...fieldDiv.querySelectorAll('ul')].find(
+    (ul) => ul.querySelectorAll('input[type="checkbox"]').length >= 2,
+  ) || null;
+}
+
 PortalEngine.register('lever', {
   detect(url, hostname) {
     return hostname.includes('lever.co') || hostname.includes('jobs.lever.co');
@@ -880,7 +935,7 @@ PortalEngine.register('lever', {
         return;
       }
 
-      const checkGroup = fieldDiv.querySelector('ul[data-qa="checkboxes"]');
+      const checkGroup = leverCheckboxList(fieldDiv);
       if (checkGroup) {
         const boxes = Array.from(checkGroup.querySelectorAll('input[type="checkbox"]'));
         seen.add(norm(label));
@@ -951,9 +1006,13 @@ PortalEngine.register('lever', {
       const fieldDiv = question.querySelector('.application-field');
       if (!fieldDiv) continue;
 
-      const checkboxes = [...fieldDiv.querySelectorAll('ul[data-qa="checkboxes"] input[type="checkbox"]')];
+      const checkList = leverCheckboxList(fieldDiv);
+      const checkboxes = checkList
+        ? [...checkList.querySelectorAll('input[type="checkbox"]')]
+        : [];
       if (checkboxes.length > 0) {
         // Match visible text only — Lever's value= can be wrong (e.g. value=Asian on White).
+        // Pronouns: support "She/her" or free-text that matches an option / Custom.
         const box = pickBestChoice(checkboxes, answer, visibleChoiceText);
         if (box) {
           if (!box.checked) {
@@ -961,6 +1020,15 @@ PortalEngine.register('lever', {
             box.checked = true;
             box.dispatchEvent(new Event('change', { bubbles: true }));
           }
+          // Custom pronouns: Lever reveals #customPronounsTextField after Custom is checked.
+          if (/^custom$/i.test(box.value || '') || box.id === 'customPronounsOption') {
+            const customInput = fieldDiv.querySelector('#customPronounsTextField, input.card-field-input[name="pronouns"]');
+            if (customInput && answer && !/^custom$/i.test(String(answer).trim())) {
+              customInput.style.display = '';
+              setNativeValue(customInput, answer, label);
+            }
+          }
+          focusFilledField(box, label);
           filled++;
         }
         continue;
@@ -973,6 +1041,7 @@ PortalEngine.register('lever', {
           r.checked = true;
           r.dispatchEvent(new MouseEvent('click', { bubbles: true }));
           r.dispatchEvent(new Event('change', { bubbles: true }));
+          focusFilledField(r, label);
           filled++;
         }
         continue;
@@ -984,6 +1053,7 @@ PortalEngine.register('lever', {
         if (hit) {
           select.value = hit.value;
           select.dispatchEvent(new Event('change', { bubbles: true }));
+          focusFilledField(select, label);
           filled++;
         }
         continue;
@@ -998,7 +1068,7 @@ PortalEngine.register('lever', {
           const national = digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits.slice(-10);
           if (national.length >= 10) value = national;
         }
-        setNativeValue(el, value);
+        setNativeValue(el, value, label);
         filled++;
       }
     }

@@ -1,0 +1,58 @@
+{
+  "personalInfo": {
+    "fullName": "Priya Sharma",
+    "firstName": "Priya",
+    "lastName": "Sharma",
+    "email": "priya.sharma@jobfitly.test",
+    "phone": "(000) 000-0001",
+    "location": "Austin, TX",
+    "linkedin": "https://www.linkedin.com/in/priyasharmademo"
+  },
+  "summary": "Business analyst with 5+ years translating stakeholder needs into clear requirements. Strong in SQL, workshops, and shipping measurable process improvements.",
+  "skills": [
+    "SQL",
+    "Excel",
+    "Jira",
+    "Requirements",
+    "Stakeholder management",
+    "Process mapping"
+  ],
+  "workExperience": [
+    {
+      "title": "Business Analyst",
+      "company": "Accenture",
+      "dates": "Mar 2021 - Present | Austin, TX",
+      "achievements": [
+        "Led discovery for 8 client workflows; cut handoff defects about 25%.",
+        "Built SQL dashboards for ops leaders tracking SLA and backlog.",
+        "Partnered with engineering to refine acceptance criteria in Jira."
+      ]
+    },
+    {
+      "title": "Associate Analyst",
+      "company": "Deloitte",
+      "dates": "Jul 2018 - Feb 2021 | Dallas, TX",
+      "achievements": [
+        "Documented as-is / to-be processes for retail and healthcare clients.",
+        "Facilitated workshops with cross-functional stakeholders."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "BBA, Business Administration",
+      "school": "University of Texas at Austin",
+      "dates": "2014 - 2018",
+      "note": ""
+    }
+  ],
+  "extras": [
+    "Work authorization: U.S. (demo)",
+    "Open to: hybrid Austin or remote BA roles"
+  ],
+  "_meta": {
+    "key": "business",
+    "fictional": true,
+    "purpose": "JobFitly demo / test only"
+  }
+}

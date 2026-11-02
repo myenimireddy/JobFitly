@@ -1,0 +1,58 @@
+{
+  "personalInfo": {
+    "fullName": "Aisha Hassan",
+    "firstName": "Aisha",
+    "lastName": "Hassan",
+    "email": "aisha.hassan@jobfitly.test",
+    "phone": "(000) 000-0010",
+    "location": "Arlington, VA",
+    "linkedin": "https://www.linkedin.com/in/aishahassandemo"
+  },
+  "summary": "Security engineer focused on AppSec and threat modeling. Blends code review, automation, and clear guidance for product teams.",
+  "skills": [
+    "AppSec",
+    "Threat modeling",
+    "Python",
+    "SIEM",
+    "Penetration testing",
+    "Secure SDLC"
+  ],
+  "workExperience": [
+    {
+      "title": "Security Engineer",
+      "company": "CrowdStrike",
+      "dates": "Oct 2021 - Present | Arlington, VA",
+      "achievements": [
+        "Ran threat models for new cloud services before major launches.",
+        "Built Python scanners catching common secret and dependency issues.",
+        "Partnered with eng on remediation SLAs tracked in SIEM dashboards."
+      ]
+    },
+    {
+      "title": "AppSec Analyst",
+      "company": "Capital One",
+      "dates": "Jul 2018 - Sep 2021 | McLean, VA",
+      "achievements": [
+        "Performed penetration tests on internal web apps.",
+        "Wrote secure coding guides adopted in onboarding."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "M.S. Cybersecurity",
+      "school": "George Mason University",
+      "dates": "2016 - 2018",
+      "note": ""
+    }
+  ],
+  "extras": [
+    "Work authorization: U.S. (demo)",
+    "Open to: DC-area hybrid"
+  ],
+  "_meta": {
+    "key": "security",
+    "fictional": true,
+    "purpose": "JobFitly demo / test only"
+  }
+}

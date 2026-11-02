@@ -1,0 +1,58 @@
+{
+  "personalInfo": {
+    "fullName": "Taylor Brooks",
+    "firstName": "Taylor",
+    "lastName": "Brooks",
+    "email": "taylor.brooks@jobfitly.test",
+    "phone": "(000) 000-0009",
+    "location": "Atlanta, GA",
+    "linkedin": "https://www.linkedin.com/in/taylorbrooksdemo"
+  },
+  "summary": "Mobile engineer shipping iOS and Android features. Comfortable in Swift, Kotlin, and React Native bridges.",
+  "skills": [
+    "Swift",
+    "Kotlin",
+    "React Native",
+    "iOS",
+    "Android",
+    "Mobile CI"
+  ],
+  "workExperience": [
+    {
+      "title": "Mobile Engineer",
+      "company": "Snap",
+      "dates": "Mar 2022 - Present | Atlanta, GA",
+      "achievements": [
+        "Shipped camera-adjacent UX with careful performance budgets.",
+        "Shared Kotlin/Swift modules for feature flags across apps.",
+        "Improved crash-free sessions via better breadcrumb logging."
+      ]
+    },
+    {
+      "title": "iOS Engineer",
+      "company": "The Home Depot",
+      "dates": "Jun 2019 - Feb 2022 | Atlanta, GA",
+      "achievements": [
+        "Built store-associate tooling in Swift with offline-friendly sync.",
+        "Led App Store release trains with staged rollouts."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "B.S. Computer Science",
+      "school": "Georgia Institute of Technology",
+      "dates": "2015 - 2019",
+      "note": ""
+    }
+  ],
+  "extras": [
+    "Work authorization: U.S. (demo)",
+    "Open to: Atlanta hybrid or remote"
+  ],
+  "_meta": {
+    "key": "mobile",
+    "fictional": true,
+    "purpose": "JobFitly demo / test only"
+  }
+}

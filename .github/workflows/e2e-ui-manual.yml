@@ -1,0 +1,98 @@
+# Manual-only UI e2e against local portal HTML fixtures (no live ATS).
+# GitHub Free: ~2,000 minutes/month — run when you need confidence, not on every push.
+name: Extension UI e2e (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      role_key:
+        description: "Optional ROLE_KEY filter (e.g. fullstack). Empty = all 10 personas."
+        required: false
+        default: ""
+      portal:
+        description: "Optional PORTAL filter (greenhouse|lever|ashby|workday). Empty = all 4."
+        required: false
+        default: ""
+      include_refill:
+        description: "Also run same-profile refill spec"
+        type: boolean
+        required: false
+        default: true
+
+concurrency:
+  group: e2e-ui-manual
+  cancel-in-progress: true
+
+jobs:
+  e2e-ui:
+    name: Side Panel matrix (local fixtures)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      ROLE_KEY: ${{ inputs.role_key }}
+      PORTAL: ${{ inputs.portal }}
+      # Optional: set repo secret GROQ_API_KEY for faster resume parse; regex fallback works without it.
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            extension/package-lock.json
+
+      - name: Install root + backend + extension
+        run: |
+          npm install --ignore-scripts
+          (cd backend && npm ci)
+          (cd extension && npm ci)
+          (cd extension && npx playwright install chromium --with-deps)
+
+      - name: Backend setup (sqlite)
+        run: |
+          if [ ! -f backend/.env ]; then cp backend/.env.example backend/.env; fi
+          cd backend && npx prisma generate && npx prisma db push --accept-data-loss
+
+      - name: Generate demo resume PDFs
+        run: node scripts/fake-resumes/generate.mjs
+
+      - name: Build extension
+        run: make build-extension
+
+      - name: Start backend
+        run: |
+          cd backend && npm start &
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:3000/health && break
+            sleep 1
+          done
+          curl -sf http://localhost:3000/health
+
+      - name: UI matrix (local fixtures)
+        working-directory: extension
+        run: |
+          # Extensions need a display; fixtures never hit live ATS.
+          xvfb-run -a npx playwright test --project=e2e-ui --retries=1
+
+      - name: Refill spec
+        if: ${{ inputs.include_refill }}
+        working-directory: extension
+        run: xvfb-run -a npx playwright test --project=e2e-ui e2e/live-extension-ui-refill.spec.js --retries=1
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-ui-artifacts
+          path: |
+            extension/e2e/artifacts/extension-ui/
+            extension/test-results/
+          if-no-files-found: ignore
+          retention-days: 14

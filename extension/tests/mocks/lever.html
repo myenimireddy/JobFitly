@@ -38,6 +38,21 @@
       </div>
     </div>
 
+    <div class="application-question">
+      <div class="application-label multiple-select">Pronouns</div>
+      <div class="application-field">
+        <ul data-qa="candidatePronounsCheckboxes" id="candidatePronounsCheckboxes">
+          <li><label><input type="checkbox" name="pronouns" value="He/him" class="standardPronounsOption"><span class="application-answer-alternative">He/him</span></label></li>
+          <li><label><input type="checkbox" name="pronouns" value="She/her" class="standardPronounsOption"><span class="application-answer-alternative">She/her</span></label></li>
+          <li><label><input type="checkbox" name="pronouns" value="They/them" class="standardPronounsOption"><span class="application-answer-alternative">They/them</span></label></li>
+          <li><label><input type="checkbox" name="pronouns" value="Use name only" id="useNameOnlyPronounsOption"><span class="application-answer-alternative">Use name only</span></label></li>
+          <li><label><input type="checkbox" value="Custom" id="customPronounsOption"><span class="application-answer-alternative">Custom</span></label>
+            <input class="card-field-input" style="display:none;" id="customPronounsTextField" type="text" maxlength="40" placeholder="Write here..." name="pronouns">
+          </li>
+        </ul>
+      </div>
+    </div>
+
     <div class="application-additional">
       <h3>Additional Questions</h3>
       

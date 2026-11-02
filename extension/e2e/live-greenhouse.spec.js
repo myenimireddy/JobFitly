@@ -113,7 +113,10 @@ test('live Reddit Greenhouse: only resume should error after inject', async ({ p
 
   console.log(JSON.stringify({ injectResult, report }, null, 2));
 
-  expect(injectResult.filled).toBeGreaterThan(10);
+  const filledN = typeof injectResult.filled === 'number'
+    ? injectResult.filled
+    : (injectResult.filled?.filled ?? 0);
+  expect(filledN).toBeGreaterThan(10);
   expect(report.stillOnForm).toBe(true);
   expect(report.resumeEmpty).toBe(true);
   expect(report.badLebanon).toBe(false);

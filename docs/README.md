@@ -6,6 +6,7 @@
 | [development.md](development.md) | Developers — `make`, env, project layout, commands |
 | [portals.md](portals.md) | ATS support + adding a portal |
 | [llm-and-privacy.md](llm-and-privacy.md) | Ollama vs Groq, sanitizer rules |
+| [samples/resumes/](samples/resumes/) | 10 fictional demo résumés (PDF + JSON) |
 
 Also see:
 

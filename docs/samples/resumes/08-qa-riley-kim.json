@@ -1,0 +1,58 @@
+{
+  "personalInfo": {
+    "fullName": "Riley Kim",
+    "firstName": "Riley",
+    "lastName": "Kim",
+    "email": "riley.kim@jobfitly.test",
+    "phone": "(000) 000-0008",
+    "location": "Portland, OR",
+    "linkedin": "https://www.linkedin.com/in/rileykimdemo"
+  },
+  "summary": "QA engineer building resilient Playwright/Cypress suites and practical test strategy for web and API surfaces.",
+  "skills": [
+    "Playwright",
+    "Cypress",
+    "API testing",
+    "Test strategy",
+    "CI",
+    "Jest"
+  ],
+  "workExperience": [
+    {
+      "title": "QA Engineer",
+      "company": "Nike",
+      "dates": "Jun 2021 - Present | Portland, OR",
+      "achievements": [
+        "Owned Playwright regression for checkout; cut flake rate substantially.",
+        "Added contract tests for key APIs in CI before release trains.",
+        "Coached feature teams on risk-based test planning."
+      ]
+    },
+    {
+      "title": "QA Analyst",
+      "company": "New Relic",
+      "dates": "Jul 2018 - May 2021 | Portland, OR",
+      "achievements": [
+        "Expanded Cypress coverage for settings and auth flows.",
+        "Documented severity guidelines adopted by support and eng."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "B.S. Software Engineering",
+      "school": "Oregon State University",
+      "dates": "2014 - 2018",
+      "note": ""
+    }
+  ],
+  "extras": [
+    "Work authorization: U.S. (demo)",
+    "Open to: Portland hybrid"
+  ],
+  "_meta": {
+    "key": "qa",
+    "fictional": true,
+    "purpose": "JobFitly demo / test only"
+  }
+}

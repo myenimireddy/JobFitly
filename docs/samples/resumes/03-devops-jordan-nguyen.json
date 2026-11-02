@@ -1,0 +1,58 @@
+{
+  "personalInfo": {
+    "fullName": "Jordan Nguyen",
+    "firstName": "Jordan",
+    "lastName": "Nguyen",
+    "email": "jordan.nguyen@jobfitly.test",
+    "phone": "(000) 000-0003",
+    "location": "Seattle, WA",
+    "linkedin": "https://www.linkedin.com/in/jordannguyendemo"
+  },
+  "summary": "DevOps engineer specializing in Kubernetes, Terraform, and CI/CD. Improves deploy reliability and platform observability.",
+  "skills": [
+    "Kubernetes",
+    "Terraform",
+    "CI/CD",
+    "AWS",
+    "Prometheus",
+    "GitHub Actions"
+  ],
+  "workExperience": [
+    {
+      "title": "DevOps Engineer",
+      "company": "HashiCorp",
+      "dates": "Feb 2022 - Present | Seattle, WA",
+      "achievements": [
+        "Standardized Terraform modules used by 12 product teams.",
+        "Cut mean time to recover with better Prometheus alerts and runbooks.",
+        "Hardened GitHub Actions pipelines with reusable workflows."
+      ]
+    },
+    {
+      "title": "SRE",
+      "company": "Expedia",
+      "dates": "Aug 2019 - Jan 2022 | Seattle, WA",
+      "achievements": [
+        "Operated multi-region Kubernetes clusters for booking services.",
+        "Automated blue/green deploys reducing failed releases."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "B.S. Computer Engineering",
+      "school": "University of Washington",
+      "dates": "2015 - 2019",
+      "note": ""
+    }
+  ],
+  "extras": [
+    "Work authorization: U.S. (demo)",
+    "Open to: Seattle hybrid"
+  ],
+  "_meta": {
+    "key": "devops",
+    "fictional": true,
+    "purpose": "JobFitly demo / test only"
+  }
+}
