@@ -34,7 +34,8 @@ Works with Greenhouse, Lever, Workday, Ashby, plus a generic HTML fallback — d
 
 Then load `extension/dist` in Chrome (`chrome://extensions` → Developer mode → Load unpacked).
 
-Full steps, troubleshooting, and how to report bugs: **[docs/setup.md](docs/setup.md)**
+Full steps, troubleshooting, and how to report bugs: **[docs/setup.md](docs/setup.md)**  
+Beta known gaps: **[docs/beta.md](docs/beta.md)**
 
 **Developers:** [docs/development.md](docs/development.md) · [CONTRIBUTING.md](CONTRIBUTING.md)
 

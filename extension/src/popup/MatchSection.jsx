@@ -8,8 +8,7 @@ import {
   getActiveTabId,
   sendMessageSafe,
 } from '../lib/contentBridge';
-
-const API_BASE = 'http://localhost:3000/api';
+import { getApiBase } from '../lib/apiConfig';
 
 function scoreTone(score) {
   if (score >= 75) return 'text-green-400 border-green-700/50 bg-green-950/30';
@@ -128,6 +127,7 @@ export function MatchSection({ profile, disabled = false }) {
         throw new Error('Page text looks too short — open the full job description');
       }
 
+      const API_BASE = await getApiBase();
       const extractRes = await fetch(`${API_BASE}/job/extract`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

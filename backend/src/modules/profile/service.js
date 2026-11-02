@@ -161,6 +161,30 @@ class ProfileService {
   }
 
   /**
+   * Lightweight list for Side Panel / web profile switcher (no rawText).
+   * @returns {Promise<Array<{ id: string, name: string, createdAt: Date, captureComplete: boolean }>>}
+   */
+  async listSummaries() {
+    const rows = await prisma.profile.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    return rows.map((row) => {
+      const data = parsedOf(row);
+      const name =
+        data?.personalInfo?.fullName
+        || data?.applicationProfile?.displayName
+        || 'Untitled profile';
+      return {
+        id: row.id,
+        name: String(name).trim() || 'Untitled profile',
+        createdAt: row.createdAt,
+        captureComplete: !!data?.applicationProfile?.captureComplete,
+      };
+    });
+  }
+
+  /**
    * Update the parsedData for a profile (user edits)
    * @param {string} id - Profile CUID
    * @param {Object} parsedData - Full updated parsedData object

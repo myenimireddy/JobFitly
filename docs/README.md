@@ -3,6 +3,7 @@
 | Doc | Audience |
 |-----|----------|
 | [setup.md](setup.md) | Beta testers — install, daily run, privacy, reporting bugs |
+| [beta.md](beta.md) | Known gaps / non-goals for the v1 beta |
 | [development.md](development.md) | Developers — `make`, env, project layout, commands |
 | [portals.md](portals.md) | ATS support + adding a portal |
 | [llm-and-privacy.md](llm-and-privacy.md) | Ollama vs Groq, sanitizer rules |

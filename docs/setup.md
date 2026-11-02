@@ -24,7 +24,10 @@ Then in Chrome:
 1. `chrome://extensions` → enable **Developer mode**
 2. **Load unpacked** → `JobFitly/extension/dist`
 3. Open the Side Panel → **Settings (gear)** → paste a key from [console.groq.com/keys](https://console.groq.com/keys)
-4. Upload a resume PDF (use a fictional sample from [`docs/samples/resumes/`](samples/resumes/) for demos)
+4. (Optional) Settings → **Backend URL** if your API is not on `http://localhost:3000`
+5. Upload a resume PDF (use a fictional sample from [`docs/samples/resumes/`](samples/resumes/) for demos)
+
+Known gaps and non-goals: **[beta.md](beta.md)**.
 
 ---
 
@@ -47,6 +50,10 @@ Keep that terminal open. Reload the extension on `chrome://extensions` after pul
 | Fill a form | **Fill Form** → review each field (never auto-Submit) |
 | Speed up AI | Settings → Groq key |
 | Local AI only | Settings → **Use Ollama** |
+| Point at another API | Settings → Backend URL → Save & check |
+| Hide profile in panel | **Clear** (keeps local DB row) |
+| Remove profile forever | **Delete** → confirm (removes DB row + matches) |
+| Resume a saved profile | **Load latest on this machine** or the profile switcher |
 
 ---
 
@@ -54,9 +61,10 @@ Keep that terminal open. Reload the extension on `chrome://extensions` after pul
 
 | Symptom | Fix |
 |---------|-----|
-| Backend offline | `./scripts/start.sh` |
+| Backend offline | `./scripts/start.sh` · check Settings → Backend URL |
 | Analyze / LLM offline | Groq key **or** `INSTALL_OLLAMA=yes ./scripts/bootstrap.sh` |
 | Stale UI | `cd extension && npm run build` → Reload extension |
+| Wrong person’s resume | Clear, then upload or pick from switcher — panel no longer auto-loads `/latest` |
 | Windows | Use [WSL](https://learn.microsoft.com/windows/wsl/) and the same scripts, or install [Node](https://nodejs.org) and run backend/extension `npm` commands manually |
 
 ---

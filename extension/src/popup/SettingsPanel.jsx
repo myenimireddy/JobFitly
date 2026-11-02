@@ -1,25 +1,37 @@
 /**
  * Side Panel Settings overlay.
- * Saves / clears Groq API key via /api/settings/llm so Analyze & Ask AI stay fast;
- * "Use Ollama" sets forceOllama on the backend (local, slower). Full key never returned by API.
+ * - Backend API origin (default localhost:3000)
+ * - Groq API key via /api/settings/llm; "Use Ollama" sets forceOllama.
+ * Full Groq key never returned by API.
  */
 import React, { useEffect, useState, useCallback } from 'react';
-
-const API_BASE = 'http://localhost:3000/api';
+import {
+  DEFAULT_API_ORIGIN,
+  getApiBase,
+  getApiOrigin,
+  getHealthUrl,
+  normalizeApiOrigin,
+  setApiOrigin,
+} from '../lib/apiConfig';
 
 export function SettingsPanel({ open, onClose, onSaved }) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savingOrigin, setSavingOrigin] = useState(false);
   const [error, setError] = useState(null);
   const [info, setInfo] = useState(null);
   const [keyInput, setKeyInput] = useState('');
   const [showKey, setShowKey] = useState(false);
+  const [originInput, setOriginInput] = useState(DEFAULT_API_ORIGIN);
+  const [originStatus, setOriginStatus] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/settings/llm`);
+      const origin = await getApiOrigin();
+      setOriginInput(origin);
+      const res = await fetch(`${await getApiBase()}/settings/llm`);
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.success) throw new Error(body.error || 'Could not load settings');
       setInfo(body.data);
@@ -35,11 +47,34 @@ export function SettingsPanel({ open, onClose, onSaved }) {
     if (open) load();
   }, [open, load]);
 
+  const saveOrigin = async () => {
+    setSavingOrigin(true);
+    setError(null);
+    setOriginStatus(null);
+    try {
+      const normalized = await setApiOrigin(originInput);
+      setOriginInput(normalized);
+      const health = await fetch(await getHealthUrl(), { signal: AbortSignal.timeout(3000) });
+      if (!health.ok) throw new Error('Backend responded but health check failed');
+      setOriginStatus(`Saved — using ${normalized}`);
+      if (typeof onSaved === 'function') onSaved({ apiOrigin: normalized });
+      await load();
+    } catch (err) {
+      setError(
+        err.name === 'TimeoutError' || err.name === 'AbortError'
+          ? 'Saved origin, but backend did not respond in time. Check ./scripts/start.sh'
+          : err.message || 'Could not reach backend at that URL',
+      );
+    } finally {
+      setSavingOrigin(false);
+    }
+  };
+
   const save = async () => {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/settings/llm`, {
+      const res = await fetch(`${await getApiBase()}/settings/llm`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ groqApiKey: keyInput.trim() }),
@@ -60,7 +95,7 @@ export function SettingsPanel({ open, onClose, onSaved }) {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/settings/llm`, {
+      const res = await fetch(`${await getApiBase()}/settings/llm`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ groqApiKey: null }),
@@ -96,6 +131,48 @@ export function SettingsPanel({ open, onClose, onSaved }) {
       </header>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
+        <section className="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-3 space-y-2">
+          <h3 className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+            Backend URL
+          </h3>
+          <p className="text-[11px] text-slate-500 leading-snug">
+            Default is local JobFitly (<code className="text-slate-400">{DEFAULT_API_ORIGIN}</code>).
+            Change only if your API runs elsewhere. Do not point this at a random cloud host with your resume.
+          </p>
+          <input
+            type="url"
+            value={originInput}
+            onChange={(e) => setOriginInput(e.target.value)}
+            placeholder={DEFAULT_API_ORIGIN}
+            spellCheck={false}
+            className="w-full rounded-md bg-slate-900 border border-slate-600 px-2 py-1.5 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={savingOrigin || !originInput.trim()}
+              onClick={saveOrigin}
+              className="flex-1 py-1.5 rounded-md text-xs font-medium bg-slate-600 hover:bg-slate-500 text-white disabled:opacity-40"
+            >
+              {savingOrigin ? 'Checking…' : 'Save & check'}
+            </button>
+            <button
+              type="button"
+              disabled={savingOrigin}
+              onClick={() => setOriginInput(DEFAULT_API_ORIGIN)}
+              className="py-1.5 px-2.5 rounded-md text-xs text-slate-400 border border-slate-600 hover:bg-slate-700/50 disabled:opacity-40"
+            >
+              Reset
+            </button>
+          </div>
+          {originStatus && <p className="text-[10px] text-green-400">{originStatus}</p>}
+          {originInput.trim() && normalizeApiOrigin(originInput) !== originInput.trim().replace(/\/+$/, '') && (
+            <p className="text-[10px] text-slate-500">
+              Will normalize to <span className="text-slate-300">{normalizeApiOrigin(originInput)}</span>
+            </p>
+          )}
+        </section>
+
         <section className="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-3">
           <h3 className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
             LLM speed
