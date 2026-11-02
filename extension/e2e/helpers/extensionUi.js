@@ -244,7 +244,7 @@ export async function uploadResume(panel, pdfPath = SAMPLE_RESUME, opts = {}) {
     const el = document.querySelector('[data-testid="panel-ready"]');
     const id = el?.getAttribute('data-profile-id') || '';
     return !!(id && id !== prev);
-  }, beforeId, { timeout: 180_000 });
+  }, beforeId, { timeout: process.env.CI ? 90_000 : 180_000 });
 
   await panel.waitForSelector('text=/skills parsed|Application details|Application profile/i', {
     timeout: 60_000,

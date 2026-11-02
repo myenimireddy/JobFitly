@@ -54,4 +54,6 @@ Artifacts: `e2e/artifacts/extension-ui/summary.json`
 
 **Not in git pre-commit.** Pre-commit runs `make test-fast` (stack + Jest + offline mocks) only.
 
-Manual CI: GitHub Actions → **Extension UI e2e (manual)** (`workflow_dispatch` only — no push/PR trigger). Optional `ROLE_KEY` / `PORTAL` inputs; regenerates PDFs in the job.
+Manual CI: GitHub Actions → **Extension UI e2e (manual)** (`workflow_dispatch` only).  
+Defaults to `ROLE_KEY=fullstack` (~1–2 min when healthy). Empty `role_key` runs all 10×4.  
+**Requires** repo secret `GROQ_API_KEY` — without it the backend waits on Ollama and each upload burns ~3 minutes until Playwright times out.

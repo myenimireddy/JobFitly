@@ -6,15 +6,15 @@ on:
   workflow_dispatch:
     inputs:
       role_key:
-        description: "Optional ROLE_KEY filter (e.g. fullstack). Empty = all 10 personas."
+        description: "ROLE_KEY filter. Default fullstack (~1–2 min). Empty = all 10 personas (much slower)."
         required: false
-        default: ""
+        default: "fullstack"
       portal:
         description: "Optional PORTAL filter (greenhouse|lever|ashby|workday). Empty = all 4."
         required: false
         default: ""
       include_refill:
-        description: "Also run same-profile refill spec"
+        description: "Run same-profile refill spec (once)"
         type: boolean
         required: false
         default: true
@@ -27,16 +27,23 @@ jobs:
   e2e-ui:
     name: Side Panel matrix (local fixtures)
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 45
     env:
       ROLE_KEY: ${{ inputs.role_key }}
       PORTAL: ${{ inputs.portal }}
-      # Optional: set repo secret GROQ_API_KEY for faster resume parse; regex fallback works without it.
+      # Required for CI: without Groq the backend tries Ollama and hangs ~3–10 min per upload.
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Require GROQ_API_KEY secret
+        run: |
+          if [ -z "${GROQ_API_KEY}" ]; then
+            echo "::error::Add repository secret GROQ_API_KEY (Settings → Secrets). Without it resume parse hangs waiting for Ollama and each test burns ~3 minutes."
+            exit 1
+          fi
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -58,7 +65,12 @@ jobs:
       - name: Backend setup (sqlite)
         run: |
           if [ ! -f backend/.env ]; then cp backend/.env.example backend/.env; fi
+          # Prefer Groq in CI (no Ollama on the runner).
+          sed -i 's/^GROQ_API_KEY=.*/GROQ_API_KEY='"$GROQ_API_KEY"'/' backend/.env || true
+          grep -q '^GROQ_API_KEY=' backend/.env || echo "GROQ_API_KEY=$GROQ_API_KEY" >> backend/.env
           cd backend && npx prisma generate && npx prisma db push --accept-data-loss
+          mkdir -p backend/data
+          printf '%s\n' '{"forceOllama":false}' > backend/data/llm-settings.json
 
       - name: Generate demo resume PDFs
         run: node scripts/fake-resumes/generate.mjs
@@ -79,12 +91,15 @@ jobs:
         working-directory: extension
         run: |
           # Extensions need a display; fixtures never hit live ATS.
-          xvfb-run -a npx playwright test --project=e2e-ui --retries=1
+          # Skip refill here — next step runs it once (avoids 2× 3‑min hangs).
+          xvfb-run -a npx playwright test --project=e2e-ui \
+            --grep-invert "same profile" \
+            --retries=0
 
       - name: Refill spec
         if: ${{ inputs.include_refill }}
         working-directory: extension
-        run: xvfb-run -a npx playwright test --project=e2e-ui e2e/live-extension-ui-refill.spec.js --retries=1
+        run: xvfb-run -a npx playwright test --project=e2e-ui e2e/live-extension-ui-refill.spec.js --retries=0
 
       - name: Upload artifacts
         if: always()
