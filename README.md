@@ -155,35 +155,33 @@ The autofill engine includes **portal-specific parsers** for accurate field dete
 
 ## Project Structure
 
+Each product block has its own README for maintainers and contributors:
+
+| Block | Docs |
+|-------|------|
+| Backend API | [backend/README.md](backend/README.md) |
+| Web app | [frontend/README.md](frontend/README.md) |
+| Chrome extension | [extension/README.md](extension/README.md) |
+| Scripts / hooks | [scripts/README.md](scripts/README.md) · [.githooks/README.md](.githooks/README.md) |
+| How to contribute | [CONTRIBUTING.md](CONTRIBUTING.md) |
+
 ```
 JobFitly/
-├── .cursor/skills/jobfitly-dev/  # Cursor agent skill for feature work
-├── backend/                      # Node.js / Express API
-│   ├── src/
-│   │   ├── modules/
-│   │   │   ├── profile/          # Resume upload, parse, application catalog
-│   │   │   ├── job/              # Job posting management
-│   │   │   ├── match/            # Job fit scoring (no LLM needed)
-│   │   │   ├── autofill/         # Planner (intents/buckets) + LLM drafts
-│   │   │   └── documents/        # Document storage
-│   │   ├── llm/                  # LLM provider abstraction (Ollama / Groq)
-│   │   └── lib/                  # PII sanitizer, resume parser, shared utils
-│   ├── prisma/                   # SQLite schema
-│   └── .env.example
-│
-├── frontend/                     # React web app (Vite + Tailwind)
-│   └── src/                      # Upload, profile editor, application capture
-│
-├── extension/                    # Chrome Extension (MV3, Vite)
-│   ├── src/
-│   │   ├── portalEngine.js       # Portal detect / scrape / inject + generic
-│   │   ├── portals/              # Portal-specific modules (e.g. GH Job Board)
-│   │   ├── content.js            # Message bridge → PortalEngine
-│   │   ├── background.js         # Service worker
-│   │   └── popup/                # React popup (HITL one-by-one fill)
-│   ├── tests/                    # Offline jsdom mocks (fast)
-│   └── e2e/                      # Playwright live ATS (portals.json)
-│
+├── CONTRIBUTING.md
+├── backend/                      # Express API — see backend/README.md
+│   ├── src/modules/              # profile, job, match, autofill, settings, …
+│   ├── src/llm/                  # Groq / Ollama factory
+│   ├── src/lib/                  # parsers, PII sanitizer, llmSettings
+│   └── prisma/
+├── frontend/                     # React web app — see frontend/README.md
+├── extension/                    # Chrome MV3 Side Panel — see extension/README.md
+│   ├── src/sidepanel/            # Primary UI
+│   ├── src/popup/                # Shared sections (Match, Autofill, Settings)
+│   ├── src/portalEngine.js       # Scrape / inject
+│   ├── tests/                    # Offline mocks
+│   └── e2e/                      # Live Playwright
+├── scripts/                      # check-stack.js (fast gate)
+├── .githooks/                    # pre-commit → make test-fast
 └── Makefile
 ```
 
@@ -254,40 +252,37 @@ CORS_ORIGIN=http://localhost:5173
 
 ## LLM Setup
 
-JobFitly uses an LLM for **resume parsing** and **autofill**. Job matching works without one.
+JobFitly uses an LLM for **resume parsing**, **match narrative**, and **autofill drafts**. Heuristic match scoring still works without one.
+
+**Effective provider** (see `backend/src/lib/llmSettings.js`):
+
+1. Extension **Settings → Use Ollama** forces local even if a Groq key exists  
+2. Else a usable Groq key (Settings UI **or** `GROQ_API_KEY` in `.env`) → **Groq (fast)**  
+3. Else → **Ollama (local, slower)**
 
 ### Option A — Ollama (local, free, private)
 
 ```bash
-# 1. Install Ollama
-brew install ollama          # macOS
-# or download from https://ollama.com
-
-# 2. Pull the model (one-time, ~2 GB)
-ollama pull llama3.2
-
-# 3. Start the server (keep this terminal open)
-make ollama
-# or: ollama serve
+brew install ollama && ollama pull llama3.2
+make ollama   # keep this terminal open
 ```
 
-Set in `backend/.env`:
 ```env
-LLM_PROVIDER=ollama
 OLLAMA_MODEL=llama3.2
 OLLAMA_BASE_URL=http://localhost:11434
 ```
 
-### Option B — Groq (cloud, free tier, no install)
+### Option B — Groq (cloud, free tier)
 
-Get a free API key from [console.groq.com](https://console.groq.com) and set:
+1. Create a key at [console.groq.com/keys](https://console.groq.com/keys)  
+2. Paste it in the extension **Settings (gear)**, *or* set:
+
 ```env
-LLM_PROVIDER=groq
 GROQ_API_KEY=gsk_your_key_here
 GROQ_MODEL=llama3-70b-8192
 ```
 
-> **Privacy note:** When using Groq or any cloud provider, PII (name, email, phone) is automatically replaced with anonymous placeholders before the request is sent, and restored locally in the response. The LLM is also instructed via its system prompt not to retain any personal data.
+> **Privacy note:** Cloud prompts run through `piiSanitizer` (placeholders → restore). Prefer the Settings UI for beta users so they own their key.
 
 ### LLM status indicator
 

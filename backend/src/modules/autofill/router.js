@@ -1,5 +1,9 @@
 'use strict';
 
+/**
+ * Autofill HTTP surface: plan fields, draft LLM answers, save missing answers.
+ * Planner policy lives in logic.js — keep ATS wording as intent phrases, not route ifs.
+ */
 const express = require('express');
 const { z } = require('zod');
 const autofillService = require('./service');

@@ -1,3 +1,7 @@
+/**
+ * Profile HTTP routes: resume upload/parse, CRUD, application-profile fields.
+ * Parsing uses LLMFactory (Groq or Ollama); catalog lives in applicationFields.js.
+ */
 const express = require('express');
 const multer = require('multer');
 const { z } = require('zod');
@@ -5,7 +9,6 @@ const profileService = require('./service');
 
 const router = express.Router();
 
-// Configure multer for PDF uploads
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit

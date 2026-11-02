@@ -1,5 +1,11 @@
 'use strict';
 
+/**
+ * Fast structural guard for the monorepo.
+ * Fails if dead entry files return, renamed UI pieces reappear under old names,
+ * or Makefile / hook wiring drifts. Run via `make test-fast` / pre-commit.
+ * See scripts/README.md.
+ */
 const fs = require('fs');
 const path = require('path');
 
@@ -33,8 +39,9 @@ console.log('Stack checks');
 assert(!fs.existsSync(path.join(root, 'backend/src/app.js')), 'dead backend/src/app.js is gone');
 assert(!fs.existsSync(path.join(root, 'extension/src/popup.js')), 'dead extension/src/popup.js is gone');
 assert(!fs.existsSync(path.join(root, 'extension/src/parsers/index.js')), 'unused parsers/ folder is gone');
-assert(!fs.existsSync(path.join(root, 'extension/src/popup/AnalyzeSection.jsx')), 'AnalyzeSection removed from extension');
+assert(!fs.existsSync(path.join(root, 'extension/src/popup/AnalyzeSection.jsx')), 'old AnalyzeSection name stays gone (use MatchSection)');
 assert(!fs.existsSync(path.join(root, 'extension/src/popup/DocumentsSection.jsx')), 'DocumentsSection removed from extension');
+assert(fs.existsSync(path.join(root, 'extension/src/popup/MatchSection.jsx')), 'MatchSection exists for apply/skip scoring');
 
 const makefile = read('Makefile');
 assert(!/docker-up/.test(makefile), 'Makefile does not advertise docker-up');
@@ -52,7 +59,6 @@ assert(injectMentions === 0, 'no /autofill/inject route');
 
 const extFiles = walk(path.join(root, 'extension/src')).filter((f) => /\.(js|jsx)$/.test(f));
 const extText = extFiles.map((f) => fs.readFileSync(f, 'utf8')).join('\n');
-assert(!extText.includes('/api/match'), 'extension does not call /api/match');
 assert(!extText.includes('/api/documents'), 'extension does not call /api/documents');
 
 const autofillUi = read('extension/src/popup/AutofillSection.jsx');
@@ -63,9 +69,16 @@ assert(autofillUi.includes("action: 'injectAutofill'"), 'inject still happens vi
 assert(autofillUi.includes('needsReview'), 'ask/llm fields pause for human review');
 assert(autofillUi.includes('startOver'), 'Start over control exists');
 assert(autofillUi.includes('isPageValueComplete'), 'already-filled fields can be skipped');
+assert(!autofillUi.includes('/api/match'), 'Fill path does not call /api/match');
+
+const matchUi = read('extension/src/popup/MatchSection.jsx');
+assert(matchUi.includes('/job/extract'), 'MatchSection extracts job from page');
+assert(matchUi.includes('/match'), 'MatchSection calls match API');
+assert(!matchUi.includes('injectAutofill'), 'MatchSection never injects into the form');
 
 const panel = read('extension/src/sidepanel/Panel.jsx');
 assert(panel.includes('AutofillSection'), 'Side Panel hosts AutofillSection');
+assert(panel.includes('MatchSection'), 'Side Panel hosts MatchSection');
 assert(panel.includes('activeTabId'), 'Side Panel passes active tab id');
 
 const saved = read('frontend/src/pages/SavedAnswers.jsx');

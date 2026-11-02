@@ -1,10 +1,13 @@
+/**
+ * Job posting routes — store extracted text from the extension/web scraper.
+ * Match scoring consumes these records via /api/match.
+ */
 const express = require('express');
 const { z } = require('zod');
 const jobService = require('./service');
 
 const router = express.Router();
 
-// Validation schemas
 const extractJobSchema = z.object({
   url: z.string().min(1),
   html: z.string().min(1),

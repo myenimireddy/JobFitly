@@ -1,3 +1,11 @@
+/**
+ * JobFitly API entrypoint.
+ *
+ * Mounts feature routers under /api/*, exposes /health and /api/llm/status,
+ * and uses long request timeouts so local Ollama resume parses do not die mid-flight.
+ *
+ * See backend/README.md for module map and LLM resolution (Groq key vs Ollama).
+ */
 require('dotenv').config();
 require('express-async-errors');
 
@@ -8,17 +16,17 @@ const morgan = require('morgan');
 const config = require('./config');
 const errorHandler = require('./middleware/errorHandler');
 
-// Import module routers
 const profileRouter = require('./modules/profile/router');
 const jobRouter = require('./modules/job/router');
 const matchRouter = require('./modules/match/router');
 const autofillRouter = require('./modules/autofill/router');
 const documentsRouter = require('./modules/documents/router');
+const settingsRouter = require('./modules/settings/router');
 const { checkLLM } = require('./lib/llmStatus');
+const { resolveLlmRuntime } = require('./lib/llmSettings');
 
 const app = express();
 
-// Middleware
 app.use(helmet());
 app.use(cors({ origin: config.corsOrigin }));
 app.use(morgan('dev'));
@@ -26,7 +34,7 @@ app.use(express.json({ limit: '10mb' }));
 
 app.use((req, res, next) => {
   const url = req.originalUrl || '';
-  // Match Ollama extract default (10m). Upload may run multiple passes → 20m.
+  // Ollama extract defaults ~10m; resume upload may run multiple passes → 20m.
   let ms = 10 * 60 * 1000;
   if (url.startsWith('/api/profile/upload')) ms = 20 * 60 * 1000;
   else if (url.startsWith('/health') || url.startsWith('/api/llm/status')) ms = 30_000;
@@ -70,13 +78,16 @@ app.use('/api/job', jobRouter);
 app.use('/api/match', matchRouter);
 app.use('/api/autofill', autofillRouter);
 app.use('/api/documents', documentsRouter);
+app.use('/api/settings', settingsRouter);
 
 // Global error handler
 app.use(errorHandler);
 
 const server = app.listen(config.port, () => {
+  const runtime = resolveLlmRuntime();
   console.log(`Server running on port ${config.port} in ${config.nodeEnv} mode`);
-  if ((config.llmProvider || 'ollama').toLowerCase() === 'ollama') {
+  console.log(`[llm] effective provider: ${runtime.provider} (source: ${runtime.source})`);
+  if (runtime.provider === 'ollama') {
     const LLMFactory = require('./llm/factory');
     try {
       const llm = LLMFactory.create();

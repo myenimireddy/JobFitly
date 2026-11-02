@@ -1,3 +1,8 @@
+/**
+ * Job↔profile match orchestration.
+ * Heuristic score always available (lib/fallback); LLM narrative via llmMatchAnalyzer
+ * when the effective provider is up. Extension MatchSection calls this through /api/match.
+ */
 const { prisma } = require('../../lib/prisma');
 const { calculateSkillMatch, calculateFitScore, analyzeJobText } = require('../../lib/fallback');
 const { analyzeMatchWithLLM } = require('../../lib/llmMatchAnalyzer');

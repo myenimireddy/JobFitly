@@ -1,1 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><rect width="128" height="128" fill="#6366f1" rx="16"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <rect width="128" height="128" fill="#0f172a"/>
+  <!-- Centered form + success (no empty black strip on the right) -->
+  <g transform="translate(10 6)">
+    <path fill="#f8fafc" d="M28 18h48l20 20v60c0 6.627-5.373 12-12 12H28c-6.627 0-12-5.373-12-12V30c0-6.627 5.373-12 12-12z"/>
+    <path fill="#cbd5e1" d="M76 18v20h20"/>
+    <rect x="36" y="52" width="44" height="8" rx="4" fill="#64748b"/>
+    <rect x="36" y="68" width="36" height="8" rx="4" fill="#64748b"/>
+    <rect x="36" y="84" width="26" height="8" rx="4" fill="#64748b"/>
+    <circle cx="88" cy="92" r="26" fill="#14b8a6"/>
+    <path fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" d="M75 92l8 8 18-18"/>
+  </g>
+</svg>

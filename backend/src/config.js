@@ -1,3 +1,9 @@
+/**
+ * Env-backed config for the API.
+ *
+ * Effective LLM provider is resolved in lib/llmSettings.js (UI key / forceOllama /
+ * GROQ_API_KEY → Groq, else Ollama). `llmProvider` here is legacy; prefer resolveLlmRuntime().
+ */
 const path = require('path');
 
 require('dotenv').config();
@@ -9,6 +15,7 @@ const isDev = (process.env.NODE_ENV || 'development') === 'development';
 const config = {
   port: parseInt(process.env.PORT, 10) || 3000,
   nodeEnv: process.env.NODE_ENV || 'development',
+  // Dev CORS is wide so extension content scripts on ATS hosts can call the API.
   corsOrigin: isDev 
     ? ['http://localhost:5173', 'http://localhost:3000', 'https://*.myworkdayjobs.com', 'https://*.ashbyhq.com', 'https://*.lever.co', 'https://*.greenhouse.io', null]
     : (process.env.CORS_ORIGIN || 'http://localhost:5173'),
@@ -16,8 +23,7 @@ const config = {
   jwtSecret: process.env.JWT_SECRET || 'dev-secret-change-in-production',
   openaiApiKey: process.env.OPENAI_API_KEY,
   version: packageJson.version,
-  
-  // LLM Configuration
+
   llmProvider: process.env.LLM_PROVIDER || 'ollama',
   ollamaModel: process.env.OLLAMA_MODEL || 'llama3.2',
   ollamaBaseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
