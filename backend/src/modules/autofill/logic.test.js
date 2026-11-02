@@ -10,12 +10,23 @@ const {
   applyLlmAnswer,
   parseLlmList,
   isFactOnlyField,
+  isPageValueComplete,
 } = require('./logic');
 
 const thinProfile = {
   personalInfo: { fullName: 'Ada Lovelace', email: 'ada@example.com' },
   workExperience: [],
 };
+
+describe('isPageValueComplete', () => {
+  test('treats empty and Select-placeholder widgets as incomplete', () => {
+    expect(isPageValueComplete('', {})).toBe(false);
+    expect(isPageValueComplete('Select One', {})).toBe(false);
+    expect(isPageValueComplete('Select Country', {})).toBe(false);
+    expect(isPageValueComplete('Please select', {})).toBe(false);
+    expect(isPageValueComplete('United States', {})).toBe(true);
+  });
+});
 
 describe('classifyIntent', () => {
   test('maps different wordings to the same intent', () => {

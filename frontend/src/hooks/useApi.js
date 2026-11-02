@@ -1,11 +1,11 @@
+/**
+ * Web-app fetch helpers against the local API (http://localhost:3000).
+ * Methods resolve to { data, error } and do not throw — callers branch on error.
+ */
 import { useCallback, useMemo } from 'react';
 
 const API_BASE = 'http://localhost:3000/api';
 
-/**
- * Hook for API calls using native fetch
- * Returns functions that always resolve to { data, error } — never throw
- */
 export function useApi() {
   /**
    * Check if backend is running

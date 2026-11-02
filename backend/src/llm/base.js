@@ -1,6 +1,6 @@
 /**
- * Base class for LLM providers
- * All LLM implementations must extend this class
+ * Contract every LLM provider must implement (ollama.js, groq.js).
+ * New providers: extend BaseLLM, then wire resolveLlmRuntime + factory.js.
  */
 class BaseLLM {
   /**

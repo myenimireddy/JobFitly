@@ -14,9 +14,12 @@ tests/
 
 ```bash
 cd extension
-npm test                 # mock-runner (jsdom)
+npm test                 # mock-runner (jsdom) — also run via `make test-fast` / git pre-commit
 npm run test:offline     # greenhouse fixture inject (Playwright, no live sites)
+npm run test:e2e         # live ATS (not in pre-commit)
 ```
+
+**Coverage note:** offline + live e2e exercise **PortalEngine scrape/inject**. Side Panel HITL UX (Ask AI, Start over, tab switch) is guarded by `scripts/check-stack.js` + backend planner Jest tests, not full UI e2e.
 
 ## Mock pages
 

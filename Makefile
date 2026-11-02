@@ -1,7 +1,14 @@
-.PHONY: install install-backend install-frontend install-extension setup run run-backend run-frontend dev dev-backend dev-frontend dev-extension ollama test test-backend test-extension check-stack build-extension clean clean-backend clean-frontend clean-extension clean-all db-push db-reset help
+.PHONY: install install-backend install-frontend install-extension install-hooks setup run run-backend run-frontend dev dev-backend dev-frontend dev-extension ollama test test-fast test-backend test-extension test-extension-offline test-e2e check-stack build-extension clean clean-backend clean-frontend clean-extension clean-all db-push db-reset help
 
-install: install-backend install-frontend install-extension
+install: install-backend install-frontend install-extension install-hooks
 	@echo "All dependencies installed!"
+
+# Installs committed .githooks/pre-commit into .git/hooks (no husky / no git config).
+install-hooks:
+	@mkdir -p .git/hooks
+	@cp .githooks/pre-commit .git/hooks/pre-commit
+	@chmod +x .git/hooks/pre-commit .githooks/pre-commit
+	@echo "Git pre-commit hook installed (runs make test-fast)"
 
 install-backend:
 	cd backend && npm install
@@ -77,10 +84,20 @@ check-stack:
 test-backend:
 	cd backend && npm test
 
+# Offline only — safe for pre-commit (no live ATS / network).
 test-extension:
-	cd extension && node tests/e2e-runner.js
+	cd extension && npm test
 
-test: check-stack test-backend test-extension
+test-extension-offline:
+	cd extension && npm run test:offline
+
+# Live Greenhouse / Lever / Ashby / Workday — run manually or in CI with secrets.
+test-e2e:
+	cd extension && npm run test:e2e
+
+test-fast: check-stack test-backend test-extension
+
+test: test-fast
 
 clean: clean-all
 
@@ -115,7 +132,10 @@ help:
 	@echo "  One-time:  brew install ollama && ollama pull llama3.2"
 	@echo ""
 	@echo "Tests:"
-	@echo "  make test             Stack checks + backend unit tests + portal e2e"
+	@echo "  make test / test-fast   Stack checks + backend Jest + offline portal mocks"
+	@echo "  make test-extension-offline  Playwright fixtures (needs browsers)"
+	@echo "  make test-e2e           Live ATS e2e (network; not in pre-commit)"
+	@echo "  make install-hooks      Enable git pre-commit → make test-fast"
 	@echo ""
 	@echo "Other:"
 	@echo "  make clean-all        Remove node_modules and dist"

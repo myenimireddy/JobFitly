@@ -30,6 +30,10 @@ cd extension
 npm run test:e2e                 # all live specs
 npm run test:e2e:customer        # Test Customer 1 × 4 portals
 npm run test:e2e -- e2e/live-consolidated-validate.spec.js
+# or from repo root:
+make test-e2e
 ```
+
+**Not in git pre-commit** — live ATS needs network and can take minutes. Pre-commit runs `make test-fast` (stack + Jest + offline mocks) only.
 
 Manual: open a URL from `portals.json`, load the extension, **Fill Form** (do not submit).

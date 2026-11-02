@@ -1,6 +1,9 @@
 /**
  * Greenhouse Job Board (boards / job-boards.greenhouse.io) — React-Select + intl-tel.
  * Kept separate so Lever / Workday / Ashby / classic Greenhouse are not affected.
+ *
+ * Hard rules: do not bulk-scrape every option menu; do not .remove() React-owned
+ * select menus from the DOM. See .cursor/skills/jobfitly-dev/autofill-pitfalls.md.
  */
 
 function norm(s) {

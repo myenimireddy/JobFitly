@@ -1,11 +1,14 @@
 /**
- * JobFitly content script — scrape the page, inject answers. Never clicks Submit.
+ * Content script injected into ATS / job pages.
+ * - Extracts job description text for Match
+ * - Forwards scrape/inject messages to PortalEngine
+ * Never clicks Submit. Keep SCRIPT_VERSION in sync with contentBridge.js.
  */
 import { PortalEngine } from './portalEngine.js';
 
 window.PortalEngine = PortalEngine;
 
-const SCRIPT_VERSION = 'v2025-11-01-rescrape-startover';
+const SCRIPT_VERSION = 'v2025-11-01-job-match';
 
 (function () {
   'use strict';
@@ -79,11 +82,27 @@ const SCRIPT_VERSION = 'v2025-11-01-rescrape-startover';
     }
 
     if (request.action === 'getJobPageText' || request.action === 'getJobText') {
-      if (!isJobPage()) {
-        sendResponse({ success: false, error: 'Not a job posting page', isJobPage: false });
+      // Always try to return page text for Job fit scoring (apply vs skip).
+      // isJobPage is advisory — posting pages and some apply pages both work.
+      const text = getJobPageText();
+      const onJob = isJobPage();
+      if (!text || text.length < 80) {
+        sendResponse({
+          success: false,
+          error: onJob
+            ? 'Could not extract enough job text'
+            : 'Open a job posting (or full description) to analyze fit',
+          isJobPage: onJob,
+        });
         return true;
       }
-      sendResponse({ success: true, text: getJobPageText(), url: window.location.href, isJobPage: true, title: document.title });
+      sendResponse({
+        success: true,
+        text,
+        url: window.location.href,
+        isJobPage: onJob,
+        title: document.title,
+      });
       return true;
     }
 

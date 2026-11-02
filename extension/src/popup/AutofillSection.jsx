@@ -1,26 +1,18 @@
+/**
+ * HITL one-field autofill UI (used by Side Panel).
+ *
+ * Flow: scrape page → POST /api/autofill → walk fields with Fill / Ask AI / Skip.
+ * LLM drafts always pause for review before inject. Never clicks Submit.
+ * See extension/README.md and backend autofill/logic.js for bucket meanings.
+ */
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import {
+  ensureContentScript,
+  sendMessageSafe,
+  sleep,
+} from '../lib/contentBridge';
 
 const API_BASE = 'http://localhost:3000/api';
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function sendMessageSafe(tabId, message, timeoutMs = 180000) {
-  return new Promise((resolve) => {
-    const timer = setTimeout(() => resolve(null), timeoutMs);
-    try {
-      chrome.tabs.sendMessage(tabId, message, (response) => {
-        clearTimeout(timer);
-        if (chrome.runtime.lastError) resolve(null);
-        else resolve(response);
-      });
-    } catch {
-      clearTimeout(timer);
-      resolve(null);
-    }
-  });
-}
 
 function looksLikeDialCode(text) {
   const t = String(text || '').trim();
@@ -268,23 +260,6 @@ function FieldPrompt({
       {busy && !draftingAi && <p className="text-[10px] text-slate-500 mt-1">Filling…</p>}
     </div>
   );
-}
-
-/** Keep in sync with content.js SCRIPT_VERSION so Start over gets scrape fixes. */
-const CONTENT_SCRIPT_VERSION = 'v2025-11-01-rescrape-startover';
-
-async function ensureContentScript(tabId) {
-  const alive = await sendMessageSafe(tabId, { action: 'ping' }, 1200);
-  if (alive?.ok && alive?.version === CONTENT_SCRIPT_VERSION) return;
-
-  try {
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      files: ['content.js'],
-      injectImmediately: true,
-    });
-  } catch { /* page may already have an older inject */ }
-  await sleep(350);
 }
 
 function filledCount(result) {

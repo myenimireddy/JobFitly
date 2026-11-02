@@ -6,31 +6,23 @@ const config = require('../config');
  * Groq LLM provider for hosted model inference
  */
 class GroqLLM extends BaseLLM {
-  constructor() {
+  /**
+   * @param {{ apiKey?: string, model?: string }} [opts]
+   */
+  constructor(opts = {}) {
     super();
-    this.client = new Groq({
-      apiKey: config.groqApiKey,
-    });
-    this.model = config.groqModel || 'llama3-70b-8192';
+    this.apiKey = opts.apiKey || config.groqApiKey;
+    this.model = opts.model || config.groqModel || 'llama3-70b-8192';
+    this.client = this.apiKey ? new Groq({ apiKey: this.apiKey }) : null;
   }
 
-  /**
-   * Check if Groq is configured
-   * @returns {boolean}
-   */
   isConfigured() {
-    return !!config.groqApiKey;
+    return !!(this.apiKey && this.client);
   }
 
-  /**
-   * Extract using Groq hosted model
-   * @param {string} systemPrompt - System instructions
-   * @param {string} userPrompt - User content
-   * @returns {Promise<string>} LLM response
-   */
   async extract(systemPrompt, userPrompt) {
     if (!this.isConfigured()) {
-      throw new Error('Groq API key not configured. Set GROQ_API_KEY in .env');
+      throw new Error('Groq API key not configured. Add it in the Side Panel Settings or backend/.env');
     }
 
     try {
@@ -38,9 +30,9 @@ class GroqLLM extends BaseLLM {
         model: this.model,
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
+          { role: 'user', content: userPrompt },
         ],
-        temperature: 0.1, // Low temperature for consistent parsing
+        temperature: 0.1,
         max_tokens: 4096,
       });
 

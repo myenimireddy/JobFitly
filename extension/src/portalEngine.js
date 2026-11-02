@@ -1,7 +1,12 @@
 /**
  * One scrape + inject engine for job application pages.
+ *
+ * Detect hostname/DOM → portal module or generic paths.
  * Portal-specific quirks live under ./portals/ (e.g. Greenhouse Job Board React-Select).
  * genericInject stays portal-agnostic: native inputs, <select>, radio, checkbox.
+ *
+ * Do not bulk-scrape React-Select menus or .remove() option trees React owns.
+ * Contributor map: extension/README.md
  */
 
 import {

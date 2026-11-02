@@ -1,9 +1,12 @@
+/**
+ * Shared web-app state: active profile, job, match, backend/LLM status.
+ * Profile id also persisted in localStorage for reload continuity with the extension.
+ */
 import React, { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
 import { useApi } from '../hooks/useApi';
 
 const STORAGE_KEY = 'jobfitcheck_profile_id';
 
-// Initial state
 const initialState = {
   profile: null,
   job: null,

@@ -1,13 +1,14 @@
+/**
+ * Web app shell: routes + AppProvider.
+ * Home = upload / edit / analyze; SavedAnswers = reused HITL answers.
+ * Side Panel (extension) is the primary fill UX — keep API usage aligned.
+ */
 import React from 'react';
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import { Home } from './pages/Home';
 import { SavedAnswers } from './pages/SavedAnswers';
 
-/**
- * App root component with routing
- * Wraps the app with AppProvider for global state
- */
 export function App() {
   return (
     <AppProvider>
