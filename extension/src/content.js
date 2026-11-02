@@ -131,6 +131,18 @@ const SCRIPT_VERSION = 'v2025-11-01-job-match';
       return true;
     }
 
+    if (request.action === 'focusFormField') {
+      Promise.resolve(PortalEngine.focusLabel(request.label))
+        .then((ok) => {
+          sendResponse({
+            ok: !!ok,
+            label: document.documentElement.dataset.jobfitlyActiveLabel || request.label || '',
+          });
+        })
+        .catch((err) => sendResponse({ ok: false, error: err.message }));
+      return true;
+    }
+
     if (request.action === 'injectAutofill') {
       Promise.resolve(PortalEngine.inject(request.answers || []))
         .then((result) => {
@@ -139,6 +151,7 @@ const SCRIPT_VERSION = 'v2025-11-01-job-match';
               filled: result.filled || 0,
               okLabels: result.okLabels || [],
               failed: result.failed || [],
+              focusedLabel: document.documentElement.dataset.jobfitlyActiveLabel || null,
             });
           } else {
             sendResponse({ filled: result || 0, okLabels: [], failed: [] });

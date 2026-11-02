@@ -130,6 +130,7 @@ function canAskAi(field, hasChoices) {
 function FieldPrompt({
   field, value, onSelect, onTyped, onCommitText, onAskAi, onSkip, busy, draftingAi, askAiError,
 }) {
+  // data-testid hooks are for Playwright extension-UI e2e only.
   const scraped = cleanOptions(field.label, field.options);
   const choices = scraped.length ? scraped : (fallbackChoices(field.label) || []);
   const consent = isConsentField(field.label);
@@ -141,7 +142,11 @@ function FieldPrompt({
   const disabled = busy || draftingAi;
 
   return (
-    <div className="rounded-lg border border-amber-700/40 bg-slate-800/50 px-2.5 py-2">
+    <div
+      className="rounded-lg border border-amber-700/40 bg-slate-800/50 px-2.5 py-2"
+      data-testid="field-prompt"
+      data-field-label={field.label || ''}
+    >
       <p className="text-[11px] text-slate-400 mb-1 leading-snug line-clamp-4" title={field.label}>
         {shortLabel}
       </p>
@@ -187,6 +192,7 @@ function FieldPrompt({
         ) : (
           <>
             <select
+              data-testid="field-prompt-select"
               value={choices.includes(value) ? value : ''}
               disabled={disabled}
               onChange={(e) => {
@@ -234,6 +240,7 @@ function FieldPrompt({
             )}
             <button
               type="button"
+              data-testid="field-prompt-fill"
               disabled={disabled || !hasText}
               onClick={() => onCommitText(String(value).trim())}
               className="flex-1 py-1.5 px-2 rounded-lg text-[11px] font-medium bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-40"
@@ -242,6 +249,7 @@ function FieldPrompt({
             </button>
             <button
               type="button"
+              data-testid="field-prompt-skip"
               disabled={disabled}
               onClick={onSkip}
               className="py-1.5 px-2.5 rounded-lg text-[11px] text-slate-400 border border-slate-600/40 hover:bg-slate-700/40 disabled:opacity-50"
@@ -270,7 +278,31 @@ function filledCount(result) {
   return 0;
 }
 
+/** Prefer an http(s) job tab — Side Panel opened as a tab must not become the fill target. */
+async function resolveFillTabId(preferredId = null) {
+  const isHttp = (url) => /^https?:/i.test(String(url || ''));
+  if (preferredId != null) {
+    try {
+      const t = await chrome.tabs.get(preferredId);
+      if (t?.id != null && isHttp(t.url)) return t.id;
+    } catch { /* tab closed */ }
+  }
+  try {
+    const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (active?.id != null && isHttp(active.url)) return active.id;
+  } catch { /* ignore */ }
+  try {
+    const all = await chrome.tabs.query({ currentWindow: true });
+    const httpTabs = all.filter((t) => t?.id != null && isHttp(t.url));
+    httpTabs.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
+    if (httpTabs[0]?.id != null) return httpTabs[0].id;
+  } catch { /* ignore */ }
+  return preferredId || null;
+}
+
 async function injectOne(tabId, profileId, label, answer, experienceIndex = null) {
+  // Bring the field into view/focus before writing (also stamped on documentElement).
+  await sendMessageSafe(tabId, { action: 'focusFormField', label }, 15000);
   const payload = [{
     label,
     answer: String(answer).trim(),
@@ -335,6 +367,7 @@ async function loadOptionsForField(tabId, field) {
 }
 
 export function AutofillSection({ profile, activeTabId = null, onFillActiveChange }) {
+  // activeTabId = last http(s) job tab from Panel (needed when Side Panel is opened as a tab in e2e).
   const [status, setStatus] = useState('idle');
   const [progressLabel, setProgressLabel] = useState('');
   const [progressIndex, setProgressIndex] = useState(0);
@@ -347,6 +380,7 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
   const [busy, setBusy] = useState(false);
   const [draftingAi, setDraftingAi] = useState(false);
   const [askAiError, setAskAiError] = useState(null);
+  const [runStats, setRunStats] = useState({ identified: 0, filled: 0, skipped: 0, skippedFilled: 0 });
 
   /** Tab this run is bound to (set when Fill / Start over begins). */
   const tabIdRef = useRef(null);
@@ -512,11 +546,9 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
     const stillThisRun = () => !abortRef.current && runIdRef.current === runId;
 
     try {
-      // Always the tab the user is looking at now (not a leftover from a previous fill).
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      const tabId = tab?.id || null;
+      const tabId = await resolveFillTabId(activeTabId);
       if (!tabId) {
-        throw new Error('No active tab — click the application page, then Fill Form');
+        throw new Error('No job tab — open the application page, then Fill Form');
       }
       tabIdRef.current = tabId;
       await ensureContentScript(tabId);
@@ -558,6 +590,12 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
         .sort(humanFillOrder);
       setSkippedFilled(scrapedComplete);
       setProgressTotal(queue.length);
+      setRunStats({
+        identified: queue.length,
+        filled: 0,
+        skipped: 0,
+        skippedFilled: scrapedComplete,
+      });
 
       if (queue.length === 0) {
         setFilledCount(0);
@@ -572,6 +610,7 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
       }
 
       let filled = 0;
+      let skippedUser = 0;
       for (let i = 0; i < queue.length; i++) {
         if (!stillThisRun()) return;
         const field = queue[i];
@@ -582,6 +621,7 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
 
         if (isPageValueComplete(field.currentValue, field)) {
           setSkippedFilled((n) => n + 1);
+          skippedUser += 1;
           await sleep(40);
           continue;
         }
@@ -601,6 +641,7 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
             break;
           }
           if (pick.kind === 'skip') {
+            skippedUser += 1;
             await sleep(120);
             continue;
           }
@@ -612,6 +653,7 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
             break;
           }
           if (pick.kind === 'skip') {
+            skippedUser += 1;
             await sleep(120);
             continue;
           }
@@ -628,12 +670,14 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
           const pick = await askHuman(tabId, { ...field, answer: null }, injectResult.suggested || answer);
           if (!stillThisRun() || !pick) break;
           if (pick.kind === 'skip') {
+            skippedUser += 1;
             await sleep(120);
             continue;
           }
           answer = pick.value;
           injectResult = await injectOne(tabId, profile.id, field.label, answer, expIdx);
           if (!injectResult.ok) {
+            skippedUser += 1;
             setErrorMsg(`Could not set “${field.label.slice(0, 40)}”. Continuing…`);
             await sleep(400);
             continue;
@@ -642,12 +686,24 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
 
         filled += injectResult.filled || 1;
         setFilledCount(filled);
+        setRunStats({
+          identified: queue.length,
+          filled,
+          skipped: skippedUser,
+          skippedFilled: scrapedComplete,
+        });
         // Brief pause between fields — human pacing.
         await sleep(280 + Math.floor(Math.random() * 180));
       }
 
       if (stillThisRun()) {
         setFilledCount(filled);
+        setRunStats({
+          identified: queue.length,
+          filled,
+          skipped: skippedUser,
+          skippedFilled: scrapedComplete,
+        });
         setStatus('done');
         setProgressLabel('');
         setFillActive(false);
@@ -659,7 +715,7 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
         setFillActive(false);
       }
     }
-  }, [profile]);
+  }, [profile, activeTabId]);
 
   /** Abort current run and re-scrape the active tab (new rows / sections included). */
   const startOver = useCallback(async () => {
@@ -698,6 +754,7 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
           <>
             <button
               type="button"
+              data-testid="fill-form-btn"
               onClick={handleFillForm}
               className="w-full py-2.5 px-3 rounded-lg font-medium text-sm bg-emerald-600 hover:bg-emerald-500 text-white"
             >
@@ -779,11 +836,22 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
         )}
 
         {status === 'done' && (
-          <div className="rounded-lg border border-emerald-800/40 bg-emerald-950/20 px-3 py-4 text-center">
+          <div
+            className="rounded-lg border border-emerald-800/40 bg-emerald-950/20 px-3 py-4 text-center"
+            data-testid="autofill-done"
+            data-identified={runStats.identified}
+            data-filled={runStats.filled}
+            data-skipped={runStats.skipped}
+            data-skipped-filled={runStats.skippedFilled}
+          >
             <p className="text-green-400 font-medium text-sm">
               {filledCount > 0
                 ? `${filledCount} fields filled`
                 : (progressLabel || 'Nothing left to fill')}
+            </p>
+            <p className="text-[10px] text-slate-500 mt-1" data-testid="autofill-done-stats">
+              Identified {runStats.identified} · filled {runStats.filled}
+              {runStats.skipped ? ` · skipped ${runStats.skipped}` : ''}
             </p>
             {skippedFilled > 0 && (
               <p className="text-[11px] text-slate-500 mt-1">

@@ -1,0 +1,58 @@
+{
+  "personalInfo": {
+    "fullName": "Maya Patel",
+    "firstName": "Maya",
+    "lastName": "Patel",
+    "email": "maya.patel@jobfitly.test",
+    "phone": "(000) 000-0006",
+    "location": "Boston, MA",
+    "linkedin": "https://www.linkedin.com/in/mayapateldemo"
+  },
+  "summary": "Data scientist with strong ML and experimentation chops. Turns messy product data into decisions using Python and Spark.",
+  "skills": [
+    "Python",
+    "ML",
+    "Spark",
+    "SQL",
+    "Experimentation",
+    "pandas"
+  ],
+  "workExperience": [
+    {
+      "title": "Data Scientist",
+      "company": "Databricks",
+      "dates": "Jan 2022 - Present | Boston, MA",
+      "achievements": [
+        "Designed uplift experiments for product growth; shipped models to production notebooks.",
+        "Built Spark pipelines cleaning event data for weekly exec reviews.",
+        "Partnered with PMs on metric definitions and guardrail KPIs."
+      ]
+    },
+    {
+      "title": "Data Analyst",
+      "company": "Wayfair",
+      "dates": "Aug 2019 - Dec 2021 | Boston, MA",
+      "achievements": [
+        "Owned SQL marts for marketplace conversion analysis.",
+        "Prototyped recommendation features later productionized by ML eng."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "M.S. Data Science",
+      "school": "Massachusetts Institute of Technology",
+      "dates": "2017 - 2019",
+      "note": ""
+    }
+  ],
+  "extras": [
+    "Work authorization: requires sponsorship (demo)",
+    "Open to: Boston hybrid"
+  ],
+  "_meta": {
+    "key": "data",
+    "fictional": true,
+    "purpose": "JobFitly demo / test only"
+  }
+}

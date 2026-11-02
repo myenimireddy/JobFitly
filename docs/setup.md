@@ -24,7 +24,7 @@ Then in Chrome:
 1. `chrome://extensions` → enable **Developer mode**
 2. **Load unpacked** → `JobFitly/extension/dist`
 3. Open the Side Panel → **Settings (gear)** → paste a key from [console.groq.com/keys](https://console.groq.com/keys)
-4. Upload a resume PDF
+4. Upload a resume PDF (use a fictional sample from [`docs/samples/resumes/`](samples/resumes/) for demos)
 
 ---
 

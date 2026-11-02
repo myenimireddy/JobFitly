@@ -1,0 +1,58 @@
+{
+  "personalInfo": {
+    "fullName": "Diego Martinez",
+    "firstName": "Diego",
+    "lastName": "Martinez",
+    "email": "diego.martinez@jobfitly.test",
+    "phone": "(000) 000-0005",
+    "location": "Chicago, IL",
+    "linkedin": "https://www.linkedin.com/in/diegomartinezdemo"
+  },
+  "summary": "Backend engineer building high-throughput services in Go. Experience with Kafka, gRPC, and Postgres at scale.",
+  "skills": [
+    "Go",
+    "Kafka",
+    "PostgreSQL",
+    "gRPC",
+    "Redis",
+    "Distributed systems"
+  ],
+  "workExperience": [
+    {
+      "title": "Backend Engineer",
+      "company": "Uber",
+      "dates": "Sep 2021 - Present | Chicago, IL",
+      "achievements": [
+        "Owned gRPC services for trip lifecycle with strict latency budgets.",
+        "Tuned Kafka consumer groups to cut lag during peak events.",
+        "Introduced Redis caching that reduced DB load on hot paths."
+      ]
+    },
+    {
+      "title": "Software Engineer",
+      "company": "Capital One",
+      "dates": "Jun 2018 - Aug 2021 | Chicago, IL",
+      "achievements": [
+        "Built payment-adjacent APIs with careful audit logging.",
+        "Led on-call rotations and postmortems for backend incidents."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "M.S. Computer Science",
+      "school": "University of Illinois Urbana-Champaign",
+      "dates": "2016 - 2018",
+      "note": "B.S. CS, UIC, 2016"
+    }
+  ],
+  "extras": [
+    "Work authorization: requires sponsorship (demo)",
+    "Open to: Chicago or remote"
+  ],
+  "_meta": {
+    "key": "backend",
+    "fictional": true,
+    "purpose": "JobFitly demo / test only"
+  }
+}

@@ -27,8 +27,19 @@ export default defineConfig({
     {
       name: 'e2e',
       testDir: join(root, 'e2e'),
-      testMatch: '**/live-*.spec.js',
+      // Inject-only live portal specs (no Chrome extension UI)
+      testMatch: /live-(?!extension-ui).*\.spec\.js$/,
       timeout: 240_000,
+    },
+    {
+      name: 'e2e-ui',
+      testDir: join(root, 'e2e'),
+      // Real Side Panel path: upload → capture → Fill Form (+ refill)
+      testMatch: '**/live-extension-ui*.spec.js',
+      timeout: 420_000,
+      use: {
+        headless: false,
+      },
     },
   ],
 });

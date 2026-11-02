@@ -54,6 +54,10 @@ async function injectAndSnapshot(page, answers) {
     const countryBtn = document.querySelector('#country--country')?.innerText || '';
     const stateBtn = document.querySelector('#address--countryRegion')?.innerText || '';
     const formAlive = document.querySelectorAll('[data-automation-id^="formField-"]').length;
+    const pronounField = fields.find((f) => /^pronouns$/i.test(f.label || ''));
+    const pronounsChecked = [...document.querySelectorAll('ul[data-qa="candidatePronounsCheckboxes"] input[type="checkbox"]:checked, #candidatePronounsCheckboxes input[type="checkbox"]:checked')]
+      .map((el) => el.value || el.parentElement?.querySelector('.application-answer-alternative')?.textContent?.trim() || '')
+      .filter(Boolean);
     return {
       portal,
       fieldCount: fields.length,
@@ -67,6 +71,9 @@ async function injectAndSnapshot(page, answers) {
       countryBtn,
       stateBtn,
       formAlive,
+      pronounsScraped: !!pronounField,
+      pronounsOptions: pronounField?.options || [],
+      pronounsChecked,
       url: location.href,
     };
   }, answers);
@@ -93,6 +100,11 @@ test('live Lever: fill core identity fields', async ({ page }) => {
   expect(injectFilled(snap)).toBeGreaterThan(5);
   expect(snap.email).toBe('alex.rivera@example.com');
   expect(snap.phone.replace(/\D/g, '')).toContain('5551234567');
+  // Pronouns: Lever uses candidatePronounsCheckboxes (not data-qa=checkboxes).
+  if (snap.pronounsScraped) {
+    expect(snap.pronounsOptions.join(' ')).toMatch(/He\/him|She\/her|They\/them/i);
+    expect(snap.pronounsChecked.join(' ')).toMatch(/He\/him/i);
+  }
 });
 
 test('live Ashby: fill core identity fields', async ({ page }) => {

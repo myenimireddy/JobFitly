@@ -43,3 +43,6 @@ extension/e2e/artifacts/
 extension/test-results/
 extension/playwright-report/
 
+# Generated demo resume PDFs (local only — regenerate via npm run generate:fake-resumes)
+docs/samples/resumes/*.pdf
+

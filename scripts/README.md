@@ -5,6 +5,7 @@
 | [`bootstrap.sh`](bootstrap.sh) | Beta testers | One-time install of missing tools + project setup (**no `make`**) |
 | [`start.sh`](start.sh) | Beta testers | Everyday: start API (+ Ollama only if no Groq key) |
 | `check-stack.js` | Devs / pre-commit | Guards against revived dead files / renamed UI pieces |
+| [`fake-resumes/generate.mjs`](fake-resumes/generate.mjs) | Devs / demos | Write 10 fictional résumé PDFs under `docs/samples/resumes/` |
 
 ## Beta testers
 
@@ -37,3 +38,12 @@ node scripts/check-stack.js   # also via make test-fast / pre-commit
 ```
 
 When you rename or remove a core UI/module, update the assertions in `check-stack.js`.
+
+## Fake demo resumes
+
+```bash
+node scripts/fake-resumes/generate.mjs
+# → docs/samples/resumes/*.pdf (+ .json)
+```
+
+Personas are fictional (`@jobfitly.test`). Edit `scripts/fake-resumes/profiles.mjs` then regenerate.

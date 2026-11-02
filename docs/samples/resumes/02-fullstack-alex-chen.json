@@ -1,0 +1,58 @@
+{
+  "personalInfo": {
+    "fullName": "Alex Chen",
+    "firstName": "Alex",
+    "lastName": "Chen",
+    "email": "alex.chen@jobfitly.test",
+    "phone": "(000) 000-0002",
+    "location": "San Francisco, CA",
+    "linkedin": "https://www.linkedin.com/in/alexchendemo"
+  },
+  "summary": "Full-stack engineer focused on TypeScript, React, and Node. Ships reliable APIs and polished product UI with strong testing habits.",
+  "skills": [
+    "TypeScript",
+    "React",
+    "Node.js",
+    "PostgreSQL",
+    "AWS",
+    "Jest"
+  ],
+  "workExperience": [
+    {
+      "title": "Full Stack Engineer",
+      "company": "Stripe",
+      "dates": "Jan 2022 - Present | San Francisco, CA",
+      "achievements": [
+        "Owned merchant dashboard features end-to-end in React and Node.",
+        "Designed Postgres-backed APIs with clear versioning and observability.",
+        "Raised Jest coverage on critical billing paths above 80%."
+      ]
+    },
+    {
+      "title": "Software Engineer",
+      "company": "Dropbox",
+      "dates": "Jun 2019 - Dec 2021 | Remote",
+      "achievements": [
+        "Built internal tools for content ops using React and Express.",
+        "Migrated legacy JS modules to TypeScript with incremental adoption."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "B.S. Computer Science",
+      "school": "Stanford University",
+      "dates": "2015 - 2019",
+      "note": ""
+    }
+  ],
+  "extras": [
+    "Work authorization: U.S. (demo)",
+    "Open to: Bay Area hybrid or remote"
+  ],
+  "_meta": {
+    "key": "fullstack",
+    "fictional": true,
+    "purpose": "JobFitly demo / test only"
+  }
+}

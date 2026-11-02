@@ -5,6 +5,7 @@
   "scripts": {
     "prepare": "make install-hooks",
     "test:fast": "make test-fast",
-    "test": "make test-fast"
+    "test": "make test-fast",
+    "generate:fake-resumes": "node scripts/fake-resumes/generate.mjs"
   }
 }

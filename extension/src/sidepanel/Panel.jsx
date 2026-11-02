@@ -9,6 +9,7 @@ import { getProfileId, setProfileId, clearProfileId } from '../lib/storage';
 import { ErrorBanner } from '../components/ErrorBanner';
 import { Spinner } from '../components/Spinner';
 import { ProfileSection } from '../popup/ProfileSection';
+import { ApplicationProfileCapture } from '../popup/ApplicationProfileCapture';
 import { MatchSection } from '../popup/MatchSection';
 import { AutofillSection } from '../popup/AutofillSection';
 import { SettingsPanel } from '../popup/SettingsPanel';
@@ -42,23 +43,53 @@ export function Panel() {
   const [tabInfo, setTabInfo] = useState({ id: null, title: '', url: '', host: '' });
   const [fillActive, setFillActive] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [showCapture, setShowCapture] = useState(false);
+  /** Last http(s) tab in this window — Fill Form target when Side Panel is not native. */
+  const [jobTabId, setJobTabId] = useState(null);
   const { loading, error, uploadResume, checkBackend, clearError } = useApi();
   const version = chrome.runtime.getManifest().version;
+  const captureComplete = !!profile?.parsedData?.applicationProfile?.captureComplete;
 
   const refreshActiveTab = useCallback(async () => {
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (!tab) return;
+      const url = tab.url || '';
+      if (/^https?:/i.test(url) && tab.id != null) {
+        setJobTabId(tab.id);
+        setTabInfo({
+          id: tab.id,
+          title: tab.title || '',
+          url,
+          host: shortenHost(url),
+        });
+        return;
+      }
+      // Extension/side-panel tab is active — keep showing last job tab host if any.
+      if (jobTabId != null) {
+        try {
+          const job = await chrome.tabs.get(jobTabId);
+          if (job?.id != null && /^https?:/i.test(job.url || '')) {
+            setTabInfo({
+              id: job.id,
+              title: job.title || '',
+              url: job.url || '',
+              host: shortenHost(job.url || ''),
+            });
+            return;
+          }
+        } catch { /* closed */ }
+      }
       setTabInfo({
         id: tab.id ?? null,
         title: tab.title || '',
-        url: tab.url || '',
-        host: shortenHost(tab.url || ''),
+        url,
+        host: shortenHost(url),
       });
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [jobTabId]);
 
   const getPageProfileId = useCallback(async () => {
     try {
@@ -103,6 +134,9 @@ export function Panel() {
         if (result?.success && result.data) {
           setProfile(result.data);
           await setProfileId(result.data.id);
+          if (!result.data?.parsedData?.applicationProfile?.captureComplete) {
+            setShowCapture(true);
+          }
         }
       } catch (err) {
         console.error('Failed to load profile:', err);
@@ -132,6 +166,7 @@ export function Panel() {
       setProfile(data);
       await setProfileId(data.id);
       await syncProfileIdToPage(data.id);
+      setShowCapture(true);
     } finally {
       setLoadingText('');
     }
@@ -139,6 +174,7 @@ export function Panel() {
 
   const handleClear = useCallback(async () => {
     setProfile(null);
+    setShowCapture(false);
     await clearProfileId();
     await syncProfileIdToPage(null);
     clearError();
@@ -191,7 +227,50 @@ export function Panel() {
             onClear={handleClear}
             compact={fillActive}
           />
+          {/* data-testid for Playwright extension-UI e2e */}
+          <div
+            aria-hidden="true"
+            data-testid="panel-ready"
+            data-profile-id={profile?.id || ''}
+            style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}
+          />
         </div>
+
+        {profile?.id && showCapture && !fillActive && (
+          <ApplicationProfileCapture
+            profileId={profile.id}
+            onSaved={(updated) => {
+              setProfile(updated);
+              if (updated?.parsedData?.applicationProfile?.captureComplete) {
+                setShowCapture(false);
+              }
+            }}
+            onSkip={() => setShowCapture(false)}
+          />
+        )}
+
+        {profile && !showCapture && !fillActive && (
+          <div
+            className={`mx-3 mb-2 flex items-center justify-between rounded-md px-2.5 py-1.5 border ${
+              captureComplete
+                ? 'border-green-800/30 bg-green-900/20'
+                : 'border-amber-800/40 bg-amber-950/30'
+            }`}
+          >
+            <p className={`text-[10px] ${captureComplete ? 'text-green-300' : 'text-amber-200/90'}`}>
+              {captureComplete
+                ? 'Application profile ready'
+                : 'Application details incomplete — Fill Form will ask more'}
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowCapture(true)}
+              className="text-[10px] text-indigo-300 hover:text-indigo-200 underline shrink-0 ml-2"
+            >
+              {captureComplete ? 'Edit details' : 'Complete details'}
+            </button>
+          </div>
+        )}
 
         {profile && (
           <>
@@ -199,7 +278,7 @@ export function Panel() {
             <div className="border-t border-slate-800 mx-3" />
             <AutofillSection
               profile={profile}
-              activeTabId={tabInfo.id}
+              activeTabId={jobTabId || tabInfo.id}
               onFillActiveChange={setFillActive}
             />
           </>

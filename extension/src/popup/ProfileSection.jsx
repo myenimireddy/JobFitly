@@ -49,9 +49,11 @@ export function ProfileSection({ profile, loading, onUpload, onClear, compact = 
             disabled={loading}
             className="hidden"
             id="pdf-upload"
+            data-testid="resume-upload-input"
           />
           <label
             htmlFor="pdf-upload"
+            data-testid="resume-upload-label"
             className={`
               block w-full py-2.5 px-3 rounded-lg text-center cursor-pointer text-sm
               transition-colors duration-200
