@@ -13,7 +13,7 @@ description: >-
 Read this skill before changing autofill, portals, profile capture, match, or LLM paths.
 Deeper maps: [architecture.md](architecture.md) · hard-won traps: [autofill-pitfalls.md](autofill-pitfalls.md).
 
-Tester / non-dev setup: repo root [`BETA_SETUP.md`](../../../BETA_SETUP.md) (`scripts/bootstrap.sh`, `scripts/start.sh` — no `make` required).
+Tester / non-dev setup: [`docs/setup.md`](../../../docs/setup.md) (`scripts/bootstrap.sh`, `scripts/start.sh` — no `make` required). Docs index: [`docs/README.md`](../../../docs/README.md).
 
 ## Stack at a glance
 
