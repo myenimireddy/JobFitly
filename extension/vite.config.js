@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { crx } from '@crxjs/vite-plugin'
-import manifest from './public/manifest.json' assert { type: 'json' }
+import manifest from './public/manifest.json' with { type: 'json' }
 
 /**
  * Programmatic re-inject of content.js must be idempotent. Rollup emits

@@ -13,6 +13,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 function load(file, url) {
   const html = readFileSync(join(__dirname, 'mocks', file), 'utf8');
   const dom = new JSDOM(html, { url, pretendToBeVisual: true });
+  // PortalEngine scrolls after scraping in browsers; jsdom leaves it unimplemented.
+  dom.window.scrollTo = () => {};
   PortalEngine._window = dom.window;
   PortalEngine._document = dom.window.document;
   globalThis.window = dom.window;
