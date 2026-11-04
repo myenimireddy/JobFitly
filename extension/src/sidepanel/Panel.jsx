@@ -248,6 +248,20 @@ export function Panel() {
     }
   }, [fetchLatestProfile, applyProfile, clearError]);
 
+  const handleSelectProfile = useCallback(async (profileId) => {
+    if (!profileId || profileId === profile?.id) return;
+    clearError();
+    setLoadingText('Switching profile…');
+    try {
+      const data = await fetchProfile(profileId);
+      await applyProfile(data);
+    } catch (err) {
+      setStaleNote(err.message || 'Could not load the selected profile.');
+    } finally {
+      setLoadingText('');
+    }
+  }, [profile?.id, fetchProfile, applyProfile, clearError]);
+
   const displayError = error
     || staleNote
     || (!backendOnline ? 'Backend offline — run ./scripts/start.sh' : null);
@@ -298,6 +312,7 @@ export function Panel() {
             onClear={handleClear}
             onDelete={handleDelete}
             onLoadLatest={handleLoadLatest}
+            onSelectProfile={handleSelectProfile}
             compact={fillActive}
           />
           <div

@@ -175,7 +175,9 @@ test('panel source keeps those rules wired', () => {
   assert.equal(panel.includes("nextShowCapture('tab-changed')"), false);
   assert.equal(match.includes('navigateJobFit'), true);
   assert.equal(match.includes('jobUrl={tabInfo.url}') || panel.includes('jobUrl={tabInfo.url}'), true);
-  assert.equal(profileUi.includes('Switch profile'), false);
+  assert.equal(profileUi.includes('Switch profile'), true);
+  assert.equal(profileUi.includes('data-testid="profile-selector"'), true);
+  assert.equal(panel.includes('onSelectProfile={handleSelectProfile}'), true);
   assert.equal(captureUi.includes("title: 'Preferences'"), false);
   assert.equal(captureUi.includes('How did you hear'), false);
 });

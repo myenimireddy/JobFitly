@@ -13,11 +13,34 @@ export function ProfileSection({
   onClear,
   onDelete,
   onLoadLatest,
+  onSelectProfile,
   compact = false,
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const skillCount = profile?.parsedData?.skills?.length ?? profile?.skills?.length ?? 0;
   const name = profile?.parsedData?.personalInfo?.fullName || profile?.name || 'Candidate';
+
+  const profileSelector = profileSummaries.length > 1 && onSelectProfile ? (
+    <label className="block mt-2 text-[10px] text-slate-500">
+      Switch profile
+      <select
+        data-testid="profile-selector"
+        value={profile?.id || ''}
+        onChange={(event) => {
+          if (event.target.value) onSelectProfile(event.target.value);
+        }}
+        disabled={loading}
+        className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs text-slate-200 disabled:opacity-50"
+      >
+        {!profile ? <option value="">Choose a saved profile…</option> : null}
+        {profileSummaries.map((summary) => (
+          <option key={summary.id} value={summary.id}>
+            {summary.name}{summary.captureComplete ? ' · ready' : ' · details needed'}
+          </option>
+        ))}
+      </select>
+    </label>
+  ) : null;
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -136,6 +159,7 @@ export function ProfileSection({
               Load latest on this machine ({profileSummaries.length} saved)
             </button>
           ) : null}
+          {profileSelector}
         </div>
       ) : (
         <div className="bg-slate-800/80 rounded-lg p-3 border border-slate-700/80">
@@ -165,6 +189,7 @@ export function ProfileSection({
               Re-upload so autofill has skills and work history to draft from.
             </p>
           )}
+          {profileSelector}
         </div>
       )}
     </div>
