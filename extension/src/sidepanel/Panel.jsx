@@ -133,12 +133,12 @@ export function Panel() {
     }
   }, [listProfiles]);
 
-  const applyProfile = useCallback(async (data) => {
+  const applyProfile = useCallback(async (data, { syncPage = true } = {}) => {
     if (!data?.id) return;
     setStaleNote(null);
     setProfile(data);
     await setProfileId(data.id);
-    await syncProfileIdToPage(data.id);
+    if (syncPage) await syncProfileIdToPage(data.id);
     setShowCapture(nextShowCapture('profile-loaded', {
       captureComplete: !!data?.parsedData?.applicationProfile?.captureComplete,
     }));
@@ -248,6 +248,22 @@ export function Panel() {
     }
   }, [fetchLatestProfile, applyProfile, clearError]);
 
+  const handleSelectProfile = useCallback(async (profileId) => {
+    if (!profileId || profileId === profile?.id) return;
+    clearError();
+    setLoadingText('Switching profile…');
+    try {
+      const data = await fetchProfile(profileId);
+      // chrome.storage.local is authoritative for explicit profile selection.
+      // Do not copy profile identity into the job site's localStorage.
+      await applyProfile(data, { syncPage: false });
+    } catch (err) {
+      setStaleNote(err.message || 'Could not load the selected profile.');
+    } finally {
+      setLoadingText('');
+    }
+  }, [profile?.id, fetchProfile, applyProfile, clearError]);
+
   const displayError = error
     || staleNote
     || (!backendOnline ? 'Backend offline — run ./scripts/start.sh' : null);
@@ -298,6 +314,7 @@ export function Panel() {
             onClear={handleClear}
             onDelete={handleDelete}
             onLoadLatest={handleLoadLatest}
+            onSelectProfile={handleSelectProfile}
             compact={fillActive}
           />
           <div

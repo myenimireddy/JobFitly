@@ -90,7 +90,7 @@ assert(fs.existsSync(path.join(root, 'extension/src/lib/captureSession.js')), 'c
 assert(fs.existsSync(path.join(root, 'extension/tests/panel-edges.js')), 'panel edge tests exist');
 
 const profileUi = read('extension/src/popup/ProfileSection.jsx');
-assert(!profileUi.includes('Switch profile'), 'profile switcher stays out of the Side Panel');
+assert(profileUi.includes('Switch profile'), 'explicit profile switcher exists in the Side Panel');
 const captureUi = read('extension/src/popup/ApplicationProfileCapture.jsx');
 assert(!captureUi.includes("title: 'Preferences'"), 'Preferences group removed from capture');
 assert(!captureUi.includes('How did you hear'), 'how-you-heard is not a saved capture field');
