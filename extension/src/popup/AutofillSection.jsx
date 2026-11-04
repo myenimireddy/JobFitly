@@ -12,6 +12,9 @@ import {
   sleep,
 } from '../lib/contentBridge';
 import { getApiBase } from '../lib/apiConfig';
+import { FILL_MODES, selectFieldsForMode } from '../lib/fillMode';
+
+const FILL_MODE_STORAGE_KEY = 'jobfitly_fill_mode';
 
 function looksLikeDialCode(text) {
   const t = String(text || '').trim();
@@ -379,7 +382,10 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
   const [busy, setBusy] = useState(false);
   const [draftingAi, setDraftingAi] = useState(false);
   const [askAiError, setAskAiError] = useState(null);
-  const [runStats, setRunStats] = useState({ identified: 0, filled: 0, skipped: 0, skippedFilled: 0 });
+  const [fillMode, setFillMode] = useState(FILL_MODES.REQUIRED_ONLY);
+  const [runStats, setRunStats] = useState({
+    identified: 0, filled: 0, skipped: 0, skippedFilled: 0, optionalSkipped: 0, unknownReviewed: 0,
+  });
 
   /** Tab this run is bound to (set when Fill / Start over begins). */
   const tabIdRef = useRef(null);
@@ -389,6 +395,19 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
   const pageContextRef = useRef({});
   const statusRef = useRef(status);
   statusRef.current = status;
+
+  useEffect(() => {
+    chrome.storage.local.get([FILL_MODE_STORAGE_KEY]).then((stored) => {
+      if (Object.values(FILL_MODES).includes(stored?.[FILL_MODE_STORAGE_KEY])) {
+        setFillMode(stored[FILL_MODE_STORAGE_KEY]);
+      }
+    }).catch(() => {});
+  }, []);
+
+  const chooseFillMode = (mode) => {
+    setFillMode(mode);
+    chrome.storage.local.set({ [FILL_MODE_STORAGE_KEY]: mode }).catch(() => {});
+  };
 
   const setFillActive = (active) => {
     if (typeof onFillActiveChange === 'function') onFillActiveChange(active);
@@ -446,7 +465,11 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
     }
     setCurrentField({
       ...enriched,
-      _reviewHint: llmDraft ? 'Review AI draft, edit if needed, then Fill' : null,
+      _reviewHint: llmDraft
+        ? 'Review AI draft, edit if needed, then Fill'
+        : (fillMode === FILL_MODES.REQUIRED_ONLY && enriched.requiredStatus === 'unknown'
+          ? 'Requirement unclear — fill or skip after reviewing the job form'
+          : null),
     });
     setFieldValue(hint);
     setAskAiError(null);
@@ -564,7 +587,9 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
       }
 
       pageContextRef.current = { url: scraped.url, title: scraped.title };
-      const scrapedComplete = scraped.fields.filter((f) => isPageValueComplete(f.currentValue, f)).length;
+      const selection = selectFieldsForMode(scraped.fields, fillMode);
+      const selectedFields = selection.fields;
+      const scrapedComplete = selectedFields.filter((f) => isPageValueComplete(f.currentValue, f)).length;
 
       setProgressLabel('Matching answers…');
       const response = await fetch(`${await getApiBase()}/autofill/generate`, {
@@ -572,7 +597,8 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           profileId: profile.id,
-          fields: scraped.fields,
+          fillMode,
+          fields: selectedFields,
           pageContext: pageContextRef.current,
         }),
       });
@@ -594,6 +620,8 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
         filled: 0,
         skipped: 0,
         skippedFilled: scrapedComplete,
+        optionalSkipped: selection.stats.optionalSkipped,
+        unknownReviewed: selection.stats.unknown,
       });
 
       if (queue.length === 0) {
@@ -690,6 +718,8 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
           filled,
           skipped: skippedUser,
           skippedFilled: scrapedComplete,
+          optionalSkipped: selection.stats.optionalSkipped,
+          unknownReviewed: selection.stats.unknown,
         });
         // Brief pause between fields — human pacing.
         await sleep(280 + Math.floor(Math.random() * 180));
@@ -702,6 +732,8 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
           filled,
           skipped: skippedUser,
           skippedFilled: scrapedComplete,
+          optionalSkipped: selection.stats.optionalSkipped,
+          unknownReviewed: selection.stats.unknown,
         });
         setStatus('done');
         setProgressLabel('');
@@ -714,7 +746,7 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
         setFillActive(false);
       }
     }
-  }, [profile, activeTabId]);
+  }, [profile, activeTabId, fillMode]);
 
   /** Abort current run and re-scrape the active tab (new rows / sections included). */
   const startOver = useCallback(async () => {
@@ -751,6 +783,38 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
 
         {(status === 'idle' || status === 'error') && (
           <>
+            <fieldset className="mb-2.5" data-testid="fill-mode-picker">
+              <legend className="text-[11px] text-slate-300 font-medium mb-1.5">Choose what to fill</legend>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  type="button"
+                  data-testid="fill-mode-required-only"
+                  aria-pressed={fillMode === FILL_MODES.REQUIRED_ONLY}
+                  onClick={() => chooseFillMode(FILL_MODES.REQUIRED_ONLY)}
+                  className={`rounded-md border px-2 py-2 text-left ${fillMode === FILL_MODES.REQUIRED_ONLY
+                    ? 'border-emerald-500/70 bg-emerald-950/35 text-emerald-200'
+                    : 'border-slate-700 bg-slate-800/40 text-slate-400'}`}
+                >
+                  <span className="block text-[11px] font-medium">Required only</span>
+                  <span className="block text-[9px] mt-0.5 opacity-75">Fast · recommended</span>
+                </button>
+                <button
+                  type="button"
+                  data-testid="fill-mode-all"
+                  aria-pressed={fillMode === FILL_MODES.ALL}
+                  onClick={() => chooseFillMode(FILL_MODES.ALL)}
+                  className={`rounded-md border px-2 py-2 text-left ${fillMode === FILL_MODES.ALL
+                    ? 'border-indigo-500/70 bg-indigo-950/35 text-indigo-200'
+                    : 'border-slate-700 bg-slate-800/40 text-slate-400'}`}
+                >
+                  <span className="block text-[11px] font-medium">All fields</span>
+                  <span className="block text-[9px] mt-0.5 opacity-75">Includes optional</span>
+                </button>
+              </div>
+              <p className="text-[9px] text-slate-500 mt-1.5">
+                Unclear fields are reviewed, never silently treated as optional.
+              </p>
+            </fieldset>
             <button
               type="button"
               data-testid="fill-form-btn"
@@ -842,6 +906,8 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
             data-filled={runStats.filled}
             data-skipped={runStats.skipped}
             data-skipped-filled={runStats.skippedFilled}
+            data-optional-skipped={runStats.optionalSkipped}
+            data-unknown-reviewed={runStats.unknownReviewed}
           >
             <p className="text-green-400 font-medium text-sm">
               {filledCount > 0
@@ -851,7 +917,13 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
             <p className="text-[10px] text-slate-500 mt-1" data-testid="autofill-done-stats">
               Identified {runStats.identified} · filled {runStats.filled}
               {runStats.skipped ? ` · skipped ${runStats.skipped}` : ''}
+              {runStats.optionalSkipped ? ` · optional ignored ${runStats.optionalSkipped}` : ''}
             </p>
+            {runStats.unknownReviewed > 0 && (
+              <p className="text-[10px] text-amber-400/80 mt-1">
+                Reviewed {runStats.unknownReviewed} field{runStats.unknownReviewed === 1 ? '' : 's'} with unclear requirement status
+              </p>
+            )}
             {skippedFilled > 0 && (
               <p className="text-[11px] text-slate-500 mt-1">
                 Skipped {skippedFilled} already filled

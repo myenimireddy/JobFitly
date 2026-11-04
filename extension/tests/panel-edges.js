@@ -177,6 +177,7 @@ test('panel source keeps those rules wired', () => {
   const match = read('src/popup/MatchSection.jsx');
   const profileUi = read('src/popup/ProfileSection.jsx');
   const captureUi = read('src/popup/ApplicationProfileCapture.jsx');
+  const autofillUi = read('src/popup/AutofillSection.jsx');
   const loadOnce = panel.match(/Load once per panel session[\s\S]{0,900}\}, \[\]\);/);
   assert.ok(loadOnce, 'profile load effect must run once per panel session');
   assert.equal(/\[refreshActiveTab/.test(loadOnce[0]), false);
@@ -190,6 +191,9 @@ test('panel source keeps those rules wired', () => {
   assert.equal(panel.includes('applyProfile(data, { syncPage: false })'), true);
   assert.equal(captureUi.includes("title: 'Preferences'"), false);
   assert.equal(captureUi.includes('How did you hear'), false);
+  assert.equal(autofillUi.includes('data-testid="fill-mode-required-only"'), true);
+  assert.equal(autofillUi.includes('data-testid="fill-mode-all"'), true);
+  assert.equal(autofillUi.includes('selectFieldsForMode(scraped.fields, fillMode)'), true);
 });
 
 console.log('panel edges passed');

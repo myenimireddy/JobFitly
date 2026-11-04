@@ -65,6 +65,7 @@ async function run() {
     const fields = await PortalEngine.scrape();
     check(fields.length > 0, `greenhouse: scraped ${fields.length} fields`);
     check(!!fields.find((f) => /email/i.test(f.label)), 'greenhouse: found Email');
+    check(fields.every((f) => ['required', 'optional'].includes(f.requiredStatus)), 'greenhouse: classified required state');
 
     const n = filledCount(await PortalEngine.inject([
       { label: 'Email', answer: 'ada@example.com' },
@@ -88,6 +89,8 @@ async function run() {
     const fields = await PortalEngine.scrape();
     check(fields.length > 0, `lever: scraped ${fields.length} fields`);
     check(!!fields.find((f) => /email/i.test(f.label)), 'lever: found Email');
+    check(fields.find((f) => /^name$/i.test(f.label))?.requiredStatus === 'required', 'lever: Name is required');
+    check(fields.find((f) => /^phone$/i.test(f.label))?.requiredStatus === 'optional', 'lever: Phone is optional');
 
     const n = filledCount(await PortalEngine.inject([
       { label: 'Email', answer: 'ada@example.com' },

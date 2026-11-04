@@ -473,6 +473,9 @@ function planField(field, profile, extraAnswers) {
     experienceIndex: expIdx,
     section: field.section || null,
     currentValue: field.currentValue ?? null,
+    required: field.required === true,
+    requiredStatus: field.requiredStatus || (field.required === true ? 'required' : 'unknown'),
+    requiredEvidence: Array.isArray(field.requiredEvidence) ? field.requiredEvidence : [],
   };
 
   // Already filled on the page → skip (only work empty fields).

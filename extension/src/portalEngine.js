@@ -32,6 +32,34 @@ function cleanLabel(el) {
     .trim();
 }
 
+function fieldIsRequired(container, controls = [], labelEl = null) {
+  const list = (Array.isArray(controls) ? controls : [controls]).filter(Boolean);
+  if (list.some((el) => el.required || el.getAttribute?.('aria-required') === 'true')) return true;
+  if (container?.getAttribute?.('aria-required') === 'true'
+    || container?.getAttribute?.('data-required') === 'true') return true;
+  if (container?.querySelector?.('[aria-required="true"], [required], .required')) return true;
+  const rawLabel = String(labelEl?.textContent || labelEl?.innerText || '');
+  return /[*✱＊]\s*$/.test(rawLabel.trim());
+}
+
+function decorateRequirements(fields, portalName = null) {
+  return (fields || []).map((field) => {
+    if (['required', 'optional', 'unknown'].includes(field.requiredStatus)) return field;
+    if (field.required === true) {
+      return { ...field, requiredStatus: 'required', requiredEvidence: ['rendered-required'] };
+    }
+    if (portalName) {
+      return {
+        ...field,
+        required: false,
+        requiredStatus: 'optional',
+        requiredEvidence: [`${portalName}-rendered-optional`],
+      };
+    }
+    return { ...field, required: false, requiredStatus: 'unknown', requiredEvidence: [] };
+  });
+}
+
 /** Scroll + focus the live field being filled; stamp label for e2e assertions. */
 function focusFilledField(el, label) {
   if (!el) return;
@@ -253,6 +281,24 @@ function fieldLabel(doc, el) {
   return el.placeholder || el.getAttribute('aria-label') || el.name || el.id || '';
 }
 
+function labelElementFor(doc, el) {
+  if (!el) return null;
+  if (el.id) {
+    const explicit = doc.querySelector(`label[for="${el.id}"]`);
+    if (explicit) return explicit;
+  }
+  return el.closest('label')
+    || el.closest('.field, [class*="field--"], .application-question, [data-field-path], [data-automation-id^="formField-"]')
+      ?.querySelector('label, .application-label, [data-automation-id="formLabel"], [class*="question-title"]')
+    || null;
+}
+
+function fieldContainerFor(el) {
+  return el?.closest(
+    '.field, [class*="field--"], .application-question, [data-field-path], [data-automation-id^="formField-"], fieldset, label',
+  ) || el?.parentElement || null;
+}
+
 function isSubmitControl(el) {
   if (!el) return false;
   const type = (el.type || '').toLowerCase();
@@ -297,7 +343,7 @@ const PortalEngine = {
       const name = portalName || this.detect();
       if (!name || !this.portals[name]) {
         console.log('[PortalEngine] No portal detected, using generic scraper');
-        return await this.genericScrape();
+        return decorateRequirements(await this.genericScrape());
       }
       const handler = this.portals[name];
       if (handler.scrape) {
@@ -306,15 +352,15 @@ const PortalEngine = {
           console.log(`[PortalEngine] ${name} scraped ${fields.length} fields`);
           if (fields.length === 0) {
             console.log(`[PortalEngine] ${name} returned 0, falling back to generic`);
-            return await this.genericScrape();
+            return decorateRequirements(await this.genericScrape());
           }
-          return fields;
+          return decorateRequirements(fields, name);
         } catch (err) {
           console.error(`[PortalEngine] ${name} scrape error:`, err);
-          return await this.genericScrape();
+          return decorateRequirements(await this.genericScrape());
         }
       }
-      return await this.genericScrape();
+      return decorateRequirements(await this.genericScrape());
     } finally {
       // Scan must not move the page — restore scroll/focus after any open menus.
       try {
@@ -469,7 +515,7 @@ const PortalEngine = {
         type,
         label: label.replace(/\s+/g, ' ').slice(0, 120),
         placeholder: el.placeholder || null,
-        required: el.required || el.getAttribute('aria-required') === 'true',
+        required: fieldIsRequired(fieldContainerFor(el), el, labelElementFor(doc, el)),
         currentValue: el.value || null,
         options: options && options.length ? options : null,
       });
@@ -491,7 +537,7 @@ const PortalEngine = {
         type: 'radio',
         label: label.replace(/\s+/g, ' ').slice(0, 120),
         placeholder: null,
-        required: els.some((el) => el.required),
+        required: fieldIsRequired(fieldContainerFor(first), els, labelElementFor(doc, first)),
         currentValue: (els.find((el) => el.checked) || {}).value || null,
         options: options.length ? options : null,
       });
@@ -633,7 +679,7 @@ PortalEngine.register('workday', {
       if (radios.length > 0) {
         pushField({
           label, type: 'radio', name: radios[0]?.name || null, id: null,
-          required: !!field.querySelector('[aria-required="true"]'),
+          required: fieldIsRequired(field, Array.from(radios), labelEl),
           options: Array.from(radios).map(r => {
             const l = doc.querySelector(`label[for="${r.id}"]`);
             return l ? cleanLabel(l) : r.value;
@@ -647,7 +693,7 @@ PortalEngine.register('workday', {
       if (checkbox) {
         pushField({
           label, type: 'checkbox', name: checkbox.name || null, id: checkbox.id || null,
-          required: checkbox.required || checkbox.getAttribute('aria-required') === 'true',
+          required: fieldIsRequired(field, checkbox, labelEl),
           options: null, placeholder: null,
           currentValue: checkbox.checked ? 'Yes' : '',
         });
@@ -662,7 +708,7 @@ PortalEngine.register('workday', {
           type: input.tagName === 'TEXTAREA' ? 'textarea' : (input.type || 'text'),
           name: input.name || null,
           id: input.id || null,
-          required: input.required || input.getAttribute('aria-required') === 'true',
+          required: fieldIsRequired(field, input, labelEl),
           options: null,
           placeholder: input.placeholder || null,
           currentValue: input.value || null,
@@ -677,7 +723,7 @@ PortalEngine.register('workday', {
           || /^(please\s+)?(select|choose)\b/i.test(rawSelectText);
         pushField({
           label, type: 'select', name: null, id: selectWidget.id || null,
-          required: selectWidget.getAttribute('aria-required') === 'true',
+          required: fieldIsRequired(field, selectWidget, labelEl),
           options: Array.from(doc.querySelectorAll('[data-automation-id="promptOption"]')).map(o => o.innerText.trim()).filter(Boolean),
           placeholder: emptySelect ? rawSelectText || 'Select One' : null,
           currentValue: emptySelect ? null : rawSelectText,
@@ -698,8 +744,7 @@ PortalEngine.register('workday', {
           : [];
         pushField({
           label, type: 'select', name: null, id: listBtn.id || null,
-          required: listBtn.getAttribute('aria-required') === 'true'
-            || !!field.querySelector('.required, [aria-required="true"]'),
+          required: fieldIsRequired(field, listBtn, labelEl),
           options: Array.from(optNodes).map((o) => (o.innerText || o.textContent || '').trim()).filter(Boolean),
           placeholder: empty ? shown || 'Select One' : null,
           currentValue: empty ? null : shown,
@@ -711,7 +756,7 @@ PortalEngine.register('workday', {
       if (select) {
         pushField({
           label, type: 'select', name: select.name || null, id: select.id || null,
-          required: select.required,
+          required: fieldIsRequired(field, select, labelEl),
           options: Array.from(select.options).map(o => o.text.trim()).filter(t => t && !/^(select|choose)/i.test(t)),
           placeholder: null, currentValue: select.value || null,
         });
@@ -722,7 +767,7 @@ PortalEngine.register('workday', {
       if (textarea) {
         pushField({
           label, type: 'textarea', name: textarea.name || null, id: textarea.id || null,
-          required: textarea.required || textarea.getAttribute('aria-required') === 'true',
+          required: fieldIsRequired(field, textarea, labelEl),
           options: null, placeholder: textarea.placeholder || null, currentValue: textarea.value || null,
         });
         return;
@@ -732,7 +777,7 @@ PortalEngine.register('workday', {
       if (input) {
         pushField({
           label, type: input.type || 'text', name: input.name || null, id: input.id || null,
-          required: input.required || input.getAttribute('aria-required') === 'true',
+          required: fieldIsRequired(field, input, labelEl),
           options: null, placeholder: input.placeholder || null, currentValue: input.value || null,
         });
       }
@@ -996,7 +1041,7 @@ PortalEngine.register('lever', {
         const radios = Array.from(radioGroup.querySelectorAll('input[type="radio"]'));
         seen.add(norm(label));
         fields.push({ label, type: 'radio', name: radios[0]?.name || null, id: null,
-          required: !!radios.find(r => r.required),
+          required: fieldIsRequired(question, radios, question.querySelector('.application-label')),
           // Prefer visible label text — Lever value attrs can disagree with the span text.
           options: radios.map((r) => {
             const span = r.parentElement?.querySelector('.application-answer-alternative');
@@ -1012,7 +1057,7 @@ PortalEngine.register('lever', {
         seen.add(norm(label));
         fields.push({
           label, type: 'checkbox', name: boxes[0]?.name || null, id: null,
-          required: false,
+          required: fieldIsRequired(question, boxes, question.querySelector('.application-label')),
           options: boxes.map((b) => {
             const span = b.parentElement?.querySelector('.application-answer-alternative');
             return (span?.textContent || b.value || '').trim();
@@ -1026,7 +1071,7 @@ PortalEngine.register('lever', {
       if (select) {
         seen.add(norm(label));
         fields.push({ label, type: 'select', name: select.name || null, id: select.id || null,
-          required: select.required,
+          required: fieldIsRequired(question, select, question.querySelector('.application-label')),
           options: Array.from(select.options).map(o => o.text.trim()).filter(t => t && !/^select/i.test(t)),
           placeholder: null, currentValue: select.value || null });
         return;
@@ -1036,7 +1081,7 @@ PortalEngine.register('lever', {
       if (textarea) {
         seen.add(norm(label));
         fields.push({ label, type: 'textarea', name: textarea.name || null, id: textarea.id || null,
-          required: textarea.required, options: null, placeholder: textarea.placeholder || null, currentValue: textarea.value || null });
+          required: fieldIsRequired(question, textarea, question.querySelector('.application-label')), options: null, placeholder: textarea.placeholder || null, currentValue: textarea.value || null });
         return;
       }
 
@@ -1044,7 +1089,7 @@ PortalEngine.register('lever', {
       if (input) {
         seen.add(norm(label));
         fields.push({ label, type: input.type || 'text', name: input.name || null, id: input.id || null,
-          required: input.required, options: null, placeholder: input.placeholder || null, currentValue: input.value || null });
+          required: fieldIsRequired(question, input, question.querySelector('.application-label')), options: null, placeholder: input.placeholder || null, currentValue: input.value || null });
       }
     });
     return fields;
@@ -1171,7 +1216,7 @@ PortalEngine.register('greenhouse', {
         if (inputs.length) {
           seen.add(norm(label));
           fields.push({ label, type: inputs[0].type, name: inputs[0].name || null, id: null,
-            required: !!inputs.find(i => i.required),
+            required: fieldIsRequired(field, inputs, labelEl),
             options: inputs.map(i => { const l = i.closest('label') || i.parentElement; return l ? cleanLabel(l) : i.value; }).filter(Boolean),
             placeholder: null, currentValue: null });
           return;
@@ -1182,7 +1227,7 @@ PortalEngine.register('greenhouse', {
       if (select) {
         seen.add(norm(label));
         fields.push({ label, type: 'select', name: select.name || null, id: select.id || null,
-          required: select.required,
+          required: fieldIsRequired(field, select, labelEl),
           options: Array.from(select.options).map(o => o.text.trim()).filter(t => t && !/^(select|choose)/i.test(t)),
           placeholder: null, currentValue: select.value || null });
         return;
@@ -1192,7 +1237,7 @@ PortalEngine.register('greenhouse', {
       if (textarea) {
         seen.add(norm(label));
         fields.push({ label, type: 'textarea', name: textarea.name || null, id: textarea.id || null,
-          required: textarea.required, options: null, placeholder: textarea.placeholder || null, currentValue: textarea.value || null });
+          required: fieldIsRequired(field, textarea, labelEl), options: null, placeholder: textarea.placeholder || null, currentValue: textarea.value || null });
         return;
       }
 
@@ -1200,7 +1245,7 @@ PortalEngine.register('greenhouse', {
       if (input) {
         seen.add(norm(label));
         fields.push({ label, type: input.type || 'text', name: input.name || null, id: input.id || null,
-          required: input.required, options: null, placeholder: input.placeholder || null, currentValue: input.value || null });
+          required: fieldIsRequired(field, input, labelEl), options: null, placeholder: input.placeholder || null, currentValue: input.value || null });
       }
     });
 
@@ -1292,7 +1337,7 @@ PortalEngine.register('ashby', {
       const yesNo = fieldEl.querySelectorAll('[data-value]');
       if (yesNo.length) {
         seen.add(norm(label));
-        fields.push({ label, type: 'radio', name: null, id: null, required: false,
+        fields.push({ label, type: 'radio', name: null, id: null, required: fieldIsRequired(fieldEl, Array.from(yesNo), labelEl),
           options: Array.from(yesNo).map(b => b.dataset.value || b.innerText.trim()).filter(Boolean),
           placeholder: null, currentValue: null });
         return;
@@ -1302,7 +1347,7 @@ PortalEngine.register('ashby', {
       if (select) {
         seen.add(norm(label));
         fields.push({ label, type: 'select', name: select.name || null, id: select.id || null,
-          required: select.required,
+          required: fieldIsRequired(fieldEl, select, labelEl),
           options: Array.from(select.options).map(o => o.text.trim()).filter(t => t && !/^(select|choose)/i.test(t)),
           placeholder: null, currentValue: select.value || null });
         return;
@@ -1312,7 +1357,7 @@ PortalEngine.register('ashby', {
       if (textarea) {
         seen.add(norm(label));
         fields.push({ label, type: 'textarea', name: textarea.name || null, id: textarea.id || null,
-          required: false, options: null, placeholder: textarea.placeholder || null, currentValue: textarea.value || null });
+          required: fieldIsRequired(fieldEl, textarea, labelEl), options: null, placeholder: textarea.placeholder || null, currentValue: textarea.value || null });
         return;
       }
 
@@ -1320,7 +1365,7 @@ PortalEngine.register('ashby', {
       if (input) {
         seen.add(norm(label));
         fields.push({ label, type: input.type || 'text', name: input.name || null, id: input.id || null,
-          required: input.required, options: null, placeholder: input.placeholder || null, currentValue: input.value || null });
+          required: fieldIsRequired(fieldEl, input, labelEl), options: null, placeholder: input.placeholder || null, currentValue: input.value || null });
       }
     });
     return fields;

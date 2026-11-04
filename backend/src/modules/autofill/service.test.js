@@ -102,4 +102,38 @@ describe('AutofillService saved-answer loop', () => {
     expect(stored.skills).toEqual(['JavaScript']);
     expect(stored).not.toHaveProperty('extraAnswers');
   });
+
+  test('required-only skips confirmed optional fields but retains unknown fields', async () => {
+    addProfile('profile-a', {
+      personalInfo: { fullName: 'Candidate Example', email: 'candidate@example.com' },
+    });
+
+    const generated = await service.generateAnswers('profile-a', [
+      { label: 'Email', requiredStatus: 'required', required: true },
+      { label: 'GitHub URL', requiredStatus: 'optional', required: false },
+      { label: 'Custom employer question', requiredStatus: 'unknown', required: false },
+    ], {}, 'required-only');
+
+    expect(generated.answers.map((answer) => answer.label)).toEqual([
+      'Email',
+      'Custom employer question',
+    ]);
+    expect(generated.requirementStats).toEqual(expect.objectContaining({
+      optionalSkipped: 1,
+      unknownReviewed: 1,
+    }));
+  });
+
+  test('all mode retains optional fields', async () => {
+    addProfile('profile-a', { personalInfo: { fullName: 'Candidate Example' } });
+
+    const generated = await service.generateAnswers('profile-a', [
+      { label: 'GitHub URL', requiredStatus: 'optional', required: false },
+    ], {}, 'all');
+
+    expect(generated.answers).toEqual([
+      expect.objectContaining({ label: 'GitHub URL', requiredStatus: 'optional' }),
+    ]);
+    expect(generated.requirementStats.optionalSkipped).toBe(0);
+  });
 });

@@ -20,6 +20,8 @@ LIVE_ATS=1 npm run test:e2e:ui          # real Greenhouse/Lever/Ashby/Workday
 LIVE_ATS=1 npm run test:e2e             # inject-only against live DOM
 ```
 
+`live-required-only.spec.js` is a no-inject/no-submit smoke that verifies each portal exposes mandatory-field metadata and that Required only removes confirmed optional fields while retaining unknown fields for review.
+
 Optional live URL overrides (only when `LIVE_ATS=1`):
 
 | Env | Portal |

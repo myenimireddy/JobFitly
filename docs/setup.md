@@ -53,7 +53,7 @@ Keep that terminal open. Reload the extension on `chrome://extensions` after pul
 | Do this | Where |
 |---------|--------|
 | Score a job | Open the posting → **Analyze this job** |
-| Fill a form | **Fill Form** → review each field (never auto-Submit) |
+| Fill a form | Choose **Required only** or **All fields** → **Fill Form** → review prompts (never auto-Submit) |
 | Speed up AI | Settings → Groq key |
 | Local AI only | Settings → **Use Ollama** |
 | Point at another API | Settings → Backend URL → Save & check (clears loaded profile) |

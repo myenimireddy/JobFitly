@@ -10,22 +10,27 @@ const autofillService = require('./service');
 
 const router = express.Router();
 
+const fieldSchema = z.object({
+  label: z.string().min(1),
+  type: z.string().optional(),
+  required: z.boolean().optional(),
+  requiredStatus: z.enum(['required', 'optional', 'unknown']).optional(),
+  requiredEvidence: z.array(z.string()).optional(),
+  options: z.array(z.string()).nullable().optional(),
+  placeholder: z.string().nullable().optional(),
+  currentValue: z.union([z.string(), z.null()]).optional(),
+  experienceIndex: z.number().int().nonnegative().nullable().optional(),
+  section: z.string().nullable().optional(),
+});
+
 const generateSchema = z.object({
   profileId: z.string().min(1),
+  fillMode: z.enum(['required-only', 'all']).default('required-only'),
   pageContext: z.object({
     url: z.string().optional(),
     title: z.string().optional(),
   }).optional(),
-  fields: z.array(z.object({
-    label: z.string().min(1),
-    type: z.string().optional(),
-    required: z.boolean().optional(),
-    options: z.array(z.string()).nullable().optional(),
-    placeholder: z.string().nullable().optional(),
-    currentValue: z.union([z.string(), z.null()]).optional(),
-    experienceIndex: z.number().int().nonnegative().nullable().optional(),
-    section: z.string().nullable().optional(),
-  })),
+  fields: z.array(fieldSchema),
 });
 
 const saveAnswersSchema = z.object({
@@ -38,11 +43,11 @@ const saveAnswersSchema = z.object({
 
 router.post('/generate', async (req, res, next) => {
   try {
-    const { profileId, pageContext = {}, fields } = generateSchema.parse(req.body);
+    const { profileId, pageContext = {}, fields, fillMode } = generateSchema.parse(req.body);
     if (!fields.length) {
       return res.status(400).json({ success: false, error: 'No fields to process' });
     }
-    const result = await autofillService.generateAnswers(profileId, fields, pageContext);
+    const result = await autofillService.generateAnswers(profileId, fields, pageContext, fillMode);
     res.json({ success: true, data: result });
   } catch (err) {
     if (err.name === 'ZodError') {
@@ -58,16 +63,7 @@ const draftSchema = z.object({
     url: z.string().optional(),
     title: z.string().optional(),
   }).optional(),
-  field: z.object({
-    label: z.string().min(1),
-    type: z.string().optional(),
-    required: z.boolean().optional(),
-    options: z.array(z.string()).nullable().optional(),
-    placeholder: z.string().nullable().optional(),
-    currentValue: z.union([z.string(), z.null()]).optional(),
-    experienceIndex: z.number().int().nonnegative().nullable().optional(),
-    section: z.string().nullable().optional(),
-  }),
+  field: fieldSchema,
 });
 
 router.post('/draft', async (req, res, next) => {
