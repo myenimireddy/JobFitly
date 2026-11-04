@@ -174,6 +174,51 @@ function isCloudProvider() {
  * Strip emails / phones from free text before a cloud LLM sees it
  * (e.g. resume parse fallback when Ollama is unavailable).
  */
+function isContactPlaceholder(value) {
+  return /\[CANDIDATE_(EMAIL|PHONE|NAME|LINKEDIN|WEBSITE|LOCATION)\]|\[EMAIL_\d+\]|\[PHONE_\d+\]/i
+    .test(String(value || ''));
+}
+
+function firstEmailIn(text) {
+  const match = String(text || '').match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
+  if (!match || isContactPlaceholder(match[0])) return null;
+  return match[0];
+}
+
+function firstPhoneIn(text) {
+  const match = String(text || '').match(/(?:\+?1[\s.\-]?)?(?:\(\d{3}\)|\d{3})[\s.\-]?\d{3}[\s.\-]?\d{4}/);
+  return match ? match[0].trim() : null;
+}
+
+/**
+ * Cloud parse shows the model [CANDIDATE_EMAIL] instead of the address.
+ * Put the real value from the original resume text back onto the profile.
+ */
+function restoreScrubbedContacts(parsed, rawText) {
+  if (!parsed || typeof parsed !== 'object') return parsed;
+  const pi = parsed.personalInfo || (parsed.personalInfo = {});
+  if (!pi.email || isContactPlaceholder(pi.email)) {
+    const email = firstEmailIn(rawText);
+    pi.email = email || (isContactPlaceholder(pi.email) ? null : pi.email);
+  }
+  const phoneStr = pi.phone && typeof pi.phone === 'object'
+    ? String(pi.phone.nationalNumber || pi.phone.number || '')
+    : String(pi.phone || '');
+  if (!phoneStr || isContactPlaceholder(phoneStr)) {
+    const phone = firstPhoneIn(rawText);
+    if (phone) {
+      pi.phone = typeof pi.phone === 'object'
+        ? { ...pi.phone, nationalNumber: phone.replace(/\D/g, '').slice(-10) }
+        : phone;
+    } else if (isContactPlaceholder(phoneStr)) {
+      pi.phone = typeof pi.phone === 'object'
+        ? { ...pi.phone, nationalNumber: '' }
+        : null;
+    }
+  }
+  return parsed;
+}
+
 function scrubContactStrings(text) {
   if (!text) return text;
   return String(text)
@@ -187,5 +232,7 @@ module.exports = {
   restoreText,
   isCloudProvider,
   scrubContactStrings,
+  isContactPlaceholder,
+  restoreScrubbedContacts,
   PLACEHOLDER,
 };

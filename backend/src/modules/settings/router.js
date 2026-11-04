@@ -6,13 +6,16 @@
  */
 const express = require('express');
 const { z } = require('zod');
-const { getPublicLlmSettings, setGroqApiKey } = require('../../lib/llmSettings');
+const { getPublicLlmSettings, setGroqApiKey, setForceOllama } = require('../../lib/llmSettings');
 const { checkLLM } = require('../../lib/llmStatus');
 
 const router = express.Router();
 
 const putSchema = z.object({
   groqApiKey: z.union([z.string(), z.null()]).optional(),
+  forceOllama: z.boolean().optional(),
+}).refine((body) => body.groqApiKey !== undefined || body.forceOllama !== undefined, {
+  message: 'Provide groqApiKey or forceOllama',
 });
 
 /** GET /api/settings/llm — public LLM config + live status. */
@@ -28,7 +31,7 @@ router.get('/llm', async (req, res) => {
 
 /**
  * PUT /api/settings/llm
- * Body: { groqApiKey: "gsk_..." } to save, or { groqApiKey: null } to clear UI key.
+ * Body: { groqApiKey } to save or clear, or { forceOllama } to switch without deleting the key.
  */
 router.put('/llm', async (req, res) => {
   const validation = putSchema.safeParse(req.body || {});
@@ -40,16 +43,10 @@ router.put('/llm', async (req, res) => {
     });
   }
 
-  if (!Object.prototype.hasOwnProperty.call(validation.data, 'groqApiKey')) {
-    return res.status(400).json({
-      success: false,
-      data: null,
-      error: 'Provide groqApiKey (string) or null to clear',
-    });
-  }
-
   try {
-    const settings = setGroqApiKey(validation.data.groqApiKey);
+    const settings = Object.prototype.hasOwnProperty.call(validation.data, 'groqApiKey')
+      ? setGroqApiKey(validation.data.groqApiKey)
+      : setForceOllama(validation.data.forceOllama);
     const status = await checkLLM();
     res.json({
       success: true,

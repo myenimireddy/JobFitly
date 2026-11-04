@@ -74,12 +74,29 @@ assert(!autofillUi.includes('/api/match'), 'Fill path does not call /api/match')
 const matchUi = read('extension/src/popup/MatchSection.jsx');
 assert(matchUi.includes('/job/extract'), 'MatchSection extracts job from page');
 assert(matchUi.includes('/match'), 'MatchSection calls match API');
+assert(matchUi.includes('navigateJobFit'), 'MatchSection scopes scores by job URL');
 assert(!matchUi.includes('injectAutofill'), 'MatchSection never injects into the form');
 
 const panel = read('extension/src/sidepanel/Panel.jsx');
 assert(panel.includes('AutofillSection'), 'Side Panel hosts AutofillSection');
 assert(panel.includes('MatchSection'), 'Side Panel hosts MatchSection');
 assert(panel.includes('activeTabId'), 'Side Panel passes active tab id');
+assert(panel.includes('jobUrl={tabInfo.url}'), 'Side Panel binds Job fit to the job tab URL');
+assert(panel.includes('nextShowCapture'), 'Side Panel uses capture session rules');
+assert(panel.includes("nextShowCapture('saved')"), 'Save closes Application details');
+
+assert(fs.existsSync(path.join(root, 'extension/src/lib/jobFitSession.js')), 'jobFitSession helper exists');
+assert(fs.existsSync(path.join(root, 'extension/src/lib/captureSession.js')), 'captureSession helper exists');
+assert(fs.existsSync(path.join(root, 'extension/tests/panel-edges.js')), 'panel edge tests exist');
+
+const profileUi = read('extension/src/popup/ProfileSection.jsx');
+assert(!profileUi.includes('Switch profile'), 'profile switcher stays out of the Side Panel');
+const captureUi = read('extension/src/popup/ApplicationProfileCapture.jsx');
+assert(!captureUi.includes("title: 'Preferences'"), 'Preferences group removed from capture');
+assert(!captureUi.includes('How did you hear'), 'how-you-heard is not a saved capture field');
+
+const portalEngine = read('extension/src/portalEngine.js');
+assert(portalEngine.includes('isWorkdayStreetLine'), 'Workday Address Line stays a text control');
 
 const saved = read('frontend/src/pages/SavedAnswers.jsx');
 assert(!saved.includes('cmplb50cy'), 'no hardcoded Saved Answers profile id');

@@ -55,7 +55,9 @@ export function ProfileUpload() {
 
   useEffect(() => {
     if (profile?.id && !captureComplete) setShowCapture(true);
-  }, [profile?.id, captureComplete]);
+    // Open when the profile changes. Save sets showCapture false and must stay closed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.id]);
 
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
@@ -239,14 +241,12 @@ export function ProfileUpload() {
 
               {showEditor && <ProfileEditor onClose={() => setShowEditor(false)} />}
 
-              {(showCapture || !captureComplete) && profile?.id && (
+              {showCapture && profile?.id && (
                 <ApplicationProfileCapture
                   profileId={profile.id}
                   onSaved={(updated) => {
-                    setProfile(updated);
-                    if (updated?.parsedData?.applicationProfile?.captureComplete) {
-                      setShowCapture(false);
-                    }
+                    if (updated) setProfile(updated);
+                    setShowCapture(false);
                   }}
                   onSkip={() => setShowCapture(false)}
                 />

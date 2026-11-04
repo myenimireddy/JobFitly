@@ -6,6 +6,7 @@ const {
   isUsableGroqKey,
   resolveLlmRuntime,
   setGroqApiKey,
+  setForceOllama,
   getPublicLlmSettings,
   SETTINGS_PATH,
 } = require('./llmSettings');
@@ -58,6 +59,21 @@ describe('llmSettings', () => {
     expect(cleared.forceOllama).toBe(true);
     expect(resolveLlmRuntime().provider).toBe('ollama');
     expect(resolveLlmRuntime().source).toBe('forced-local');
+  });
+
+  test('switching to ollama keeps the saved groq key', () => {
+    const key = 'gsk_' + 'c'.repeat(40);
+    setGroqApiKey(key);
+    const local = setForceOllama(true);
+    expect(local.provider).toBe('ollama');
+    expect(local.forceOllama).toBe(true);
+    expect(local.hasGroqKey).toBe(true);
+    expect(resolveLlmRuntime().source).toBe('forced-local');
+
+    const cloud = setForceOllama(false);
+    expect(cloud.provider).toBe('groq');
+    expect(cloud.forceOllama).toBe(false);
+    expect(resolveLlmRuntime().groqApiKey).toBe(key);
   });
 
   test('public settings never expose full key', () => {

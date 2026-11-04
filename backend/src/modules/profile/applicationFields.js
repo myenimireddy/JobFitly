@@ -43,11 +43,8 @@ const APPLICATION_FIELD_CATALOG = [
   { key: 'workAuthUS', label: 'Authorized to work in the U.S.?', type: 'select', group: 'eligibility', options: ['Yes', 'No'] },
   { key: 'sponsorshipRequired', label: 'Will you need visa sponsorship now or in the future?', type: 'select', group: 'eligibility', options: ['Yes', 'No'] },
   { key: 'age18Plus', label: 'Are you 18 or over?', type: 'select', group: 'eligibility', options: ['Yes', 'No'] },
-  // Employer/geo-specific (Bay Area, “worked here before”) stay out of capture — answer per job in HITL.
-
-  // Preferences
-  { key: 'hearAbout', label: 'How did you hear about jobs / this company? (default)', type: 'text', group: 'preferences' },
-  { key: 'availableFrom', label: 'Earliest start date / notice period', type: 'text', group: 'preferences', optional: true },
+  { key: 'availableFrom', label: 'Earliest start date / notice period', type: 'text', group: 'eligibility', optional: true },
+  // Employer/geo-specific and “how did you hear about this company” stay out of capture — answer per job in Fill Form.
 
   // EEO (optional decline — stored exactly for option snapping)
   { key: 'gender', label: 'Gender', type: 'text', group: 'eeo', optional: true },

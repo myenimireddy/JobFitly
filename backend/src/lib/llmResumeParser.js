@@ -11,7 +11,7 @@
 
 const LLMFactory = require('../llm/factory');
 const { resolveLlmRuntime } = require('./llmSettings');
-const { scrubContactStrings } = require('./piiSanitizer');
+const { scrubContactStrings, restoreScrubbedContacts } = require('./piiSanitizer');
 
 const PARSE_TIMEOUT_MS = 10 * 60 * 1000;
 
@@ -194,7 +194,7 @@ async function parseResumeWithLLM(rawText) {
       return parsed;
     }
 
-    let parsed = await onePass();
+    let parsed = restoreScrubbedContacts(await onePass(), rawText);
     console.log('\n━━━ [llmParser] PARSED OUTPUT ━━━');
     console.log('  personalInfo :', JSON.stringify(parsed.personalInfo));
     console.log(`  skills       : [${parsed.skills.length}]`, parsed.skills.slice(0, 8));
@@ -207,7 +207,7 @@ async function parseResumeWithLLM(rawText) {
       console.warn('[llmParser] First pass incomplete — running full parse again');
       const retry = await onePass();
       if (isCompleteParse(retry) || (retry.workExperience || []).length >= (parsed.workExperience || []).length) {
-        parsed = retry;
+        parsed = restoreScrubbedContacts(retry, rawText);
       }
     }
     if (!isCompleteParse(parsed)) return null;

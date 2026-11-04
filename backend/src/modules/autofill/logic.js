@@ -1,5 +1,7 @@
 'use strict';
 
+const { isContactPlaceholder } = require('../../lib/piiSanitizer');
+
 /**
  * Autofill planner
  *
@@ -252,7 +254,7 @@ function buildFacts(profile) {
     : (phone.country || dial || null);
 
   return {
-    email: pi.email || null,
+    email: pi.email && !isContactPlaceholder(pi.email) ? pi.email : null,
     phone: phone.nationalNumber || null,
     phoneCountryLabel,
     phoneDeviceType: ap.phoneDeviceType || 'Mobile',
@@ -525,7 +527,8 @@ function planField(field, profile, extraAnswers) {
 
   const allowsDial = intent.id === 'phone_country'
     || optionsLookLikeDialCodes(options);
-  const stored = lookupStored(extraAnswers, label, options);
+  const storedRaw = lookupStored(extraAnswers, label, options);
+  const stored = storedRaw && !isContactPlaceholder(storedRaw) ? storedRaw : null;
   if (stored) {
     // Drop poisoned saves like orientation = "United States +1".
     if (!allowsDial && looksLikeDialCodeAnswer(stored)) {

@@ -107,8 +107,22 @@ function getPublicLlmSettings() {
     ollamaModel: runtime.ollamaModel,
     message: runtime.provider === 'groq'
       ? `Groq (fast) — key …${key.slice(-4)}`
-      : 'Ollama (local) — add a Groq key for faster Analyze / Ask AI',
+      : key
+        ? 'Ollama (local). Groq key is saved — switch back anytime.'
+        : 'Ollama (local) — add a Groq key for faster Analyze / Ask AI',
   };
+}
+
+/**
+ * Switch to local Ollama without deleting a saved Groq key.
+ * force=false uses the saved key (or .env) again.
+ */
+function setForceOllama(force) {
+  const current = readFileSettings();
+  if (force) current.forceOllama = true;
+  else delete current.forceOllama;
+  writeFileSettings(current);
+  return getPublicLlmSettings();
 }
 
 function setGroqApiKey(apiKey) {
@@ -136,5 +150,6 @@ module.exports = {
   resolveLlmRuntime,
   getPublicLlmSettings,
   setGroqApiKey,
+  setForceOllama,
   SETTINGS_PATH,
 };
