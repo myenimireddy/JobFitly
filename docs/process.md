@@ -88,7 +88,7 @@ Current beta channel: **unpacked Chrome extension** + local backend. Chrome Web 
 1. Working tree clean; `make test-fast` green.
 2. Manual beta smoke (above) with Groq preferred.
 3. Open or update PR → review → merge to `main` (**delete remote branch** on merge).
-4. Optional tag when smoke is boring: e.g. `v0.1.0-beta`.
+4. Optional tag when smoke is boring: e.g. `v0.1.0-beta` (current: [`v0.1.0-beta`](https://github.com/myenimireddy/JobFitly/releases/tag/v0.1.0-beta)).
 5. Confirm `GROQ_API_KEY` secret for maintainer UI e2e.
 6. Point testers at [setup.md](setup.md) + [beta.md](beta.md). Invite copy can reuse that pair.
 
