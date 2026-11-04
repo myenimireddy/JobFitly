@@ -146,9 +146,6 @@ async function run() {
     console.log('\n== ashby ==');
     const dom = load('ashby.html', 'https://jobs.ashbyhq.com/acme');
     const doc = dom.window.document;
-    doc.querySelectorAll('[data-field-path="workAuthorization"] button').forEach((btn) => {
-      btn.dataset.value = (btn.textContent || '').trim();
-    });
 
     const fields = await PortalEngine.scrape();
     check(fields.length > 0, `ashby: scraped ${fields.length} fields`);

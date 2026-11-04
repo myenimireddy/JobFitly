@@ -12,6 +12,8 @@ Portal-specific scrape/inject lives in `extension/src/portalEngine.js` and `exte
 
 **LinkedIn:** job-text extract for **Analyze** only — not Easy Apply autofill.
 
+**Field-type coverage (kitchen-sink fixtures):** [portal-field-coverage.md](portal-field-coverage.md) — green/red sheet for text, select, radio, checkbox, React-Select, file, etc.
+
 ## Adding a portal
 
 1. Prefer `extension/src/portals/<name>.js` + register in `portalEngine.js`

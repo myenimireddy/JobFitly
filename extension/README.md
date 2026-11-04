@@ -17,7 +17,7 @@ Load unpacked from `extension/dist/` after build. Manifest: `public/manifest.jso
 | Offline tests | `tests/` | jsdom mocks (fast, pre-commit) |
 | Live e2e | `e2e/` | Playwright against real ATS URLs |
 
-API base is currently `http://localhost:3000/api` (see `useApi`, Match/Settings sections). Change that intentionally when shipping a hosted beta.
+API origin defaults to `http://localhost:3000` (`src/lib/apiConfig.js`). Testers can change it in Side Panel **Settings → Backend URL** (stored in `chrome.storage.local`).
 
 ## HITL autofill pipeline
 

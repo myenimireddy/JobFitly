@@ -13,7 +13,8 @@ description: >-
 Read this skill before changing autofill, portals, profile capture, match, or LLM paths.
 Deeper maps: [architecture.md](architecture.md) · hard-won traps: [autofill-pitfalls.md](autofill-pitfalls.md).
 
-Tester / non-dev setup: [`docs/setup.md`](../../../docs/setup.md) (`scripts/bootstrap.sh`, `scripts/start.sh` — no `make` required). Docs index: [`docs/README.md`](../../../docs/README.md).
+Process (design → develop → test → release): [`docs/process.md`](../../../docs/process.md).  
+Tester setup: [`docs/setup.md`](../../../docs/setup.md) (`scripts/bootstrap.sh`, `scripts/start.sh`). Docs index: [`docs/README.md`](../../../docs/README.md).
 
 ## Stack at a glance
 

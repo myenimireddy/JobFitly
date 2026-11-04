@@ -107,7 +107,7 @@ function slug(p) {
   return `${String(PROFILES.indexOf(p) + 1).padStart(2, '0')}-${p.key}-${p.firstName.toLowerCase()}-${p.lastName.toLowerCase()}`;
 }
 
-function main() {
+async function main() {
   const { out } = parseArgs(process.argv.slice(2));
   fs.mkdirSync(out, { recursive: true });
 
@@ -116,7 +116,7 @@ function main() {
     const base = slug(p);
     const pdfPath = path.join(out, `${base}.pdf`);
     const jsonPath = path.join(out, `${base}.json`);
-    const pdf = buildTextPdf(linesFor(p), {
+    const pdf = await buildTextPdf(linesFor(p), {
       title: `${p.firstName} ${p.lastName} - fictional demo resume`,
     });
     fs.writeFileSync(pdfPath, pdf);
@@ -142,11 +142,14 @@ function main() {
     '**Fictional personas only** — for JobFitly Side Panel demos, LinkedIn videos, and parser tests.',
     'Do not use as your identity on real job applications.',
     '',
-    'Regenerate:',
+    'Phones are masked as `(000) 000-00NN` (not real numbers). **PDF files are gitignored** — generate locally:',
     '',
     '```bash',
-    'node scripts/fake-resumes/generate.mjs',
+    'npm run generate:fake-resumes',
+    '# or: (cd scripts/fake-resumes && npm install) && node scripts/fake-resumes/generate.mjs',
     '```',
+    '',
+    'JSON + `index.json` stay in git; CI regenerates PDFs before UI e2e.',
     '',
     '| # | Name | Role | PDF |',
     '|---|------|------|-----|',
@@ -160,4 +163,7 @@ function main() {
   console.log(`\n${index.length} resumes → ${path.relative(root, out)}`);
 }
 
-main();
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

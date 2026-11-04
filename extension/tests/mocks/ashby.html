@@ -38,26 +38,46 @@
     <!-- Yes/No Buttons -->
     <div data-field-path="workAuthorization">
       <div class="ashby-application-form-question-title">Are you authorized to work in the US? <span>*</span></div>
-      <div class="_yesno_y2cw4">
-        <button type="button" class="_option_y2cw4" aria-pressed="false">Yes</button>
-        <button type="button" class="_option_y2cw4" aria-pressed="false">No</button>
+      <div class="_yesno_y2cw4" data-testid="ks-custom-select">
+        <button type="button" class="_option_y2cw4" data-value="Yes" aria-pressed="false">Yes</button>
+        <button type="button" class="_option_y2cw4" data-value="No" aria-pressed="false">No</button>
       </div>
     </div>
 
     <!-- Textarea -->
-    <div data-field-path="coverLetter">
+    <div data-field-path="coverLetter" data-testid="ks-textarea">
       <div class="ashby-application-form-question-title">Cover Letter</div>
       <textarea rows="6" placeholder="Tell us about yourself..."></textarea>
     </div>
 
     <!-- Radio Options -->
-    <div data-field-path="experienceLevel">
+    <div data-field-path="experienceLevel" data-testid="ks-radio">
       <div class="ashby-application-form-question-title">Experience Level <span>*</span></div>
       <fieldset>
         <label><input type="radio" name="exp" value="junior"> Junior (0-2 years)</label><br>
         <label><input type="radio" name="exp" value="mid"> Mid-level (2-5 years)</label><br>
         <label><input type="radio" name="exp" value="senior"> Senior (5+ years)</label>
       </fieldset>
+    </div>
+
+    <div data-field-path="source" data-testid="ks-select">
+      <div class="ashby-application-form-question-title">How did you hear about us?</div>
+      <select name="source">
+        <option value="">Select...</option>
+        <option>LinkedIn</option>
+        <option>Referral</option>
+        <option>Company Website</option>
+      </select>
+    </div>
+
+    <div data-field-path="consent" data-testid="ks-checkbox">
+      <div class="ashby-application-form-question-title">Consent</div>
+      <label><input type="checkbox" name="consent" value="1"> I agree to the candidate privacy policy</label>
+    </div>
+
+    <div data-field-path="resume" data-testid="ks-file">
+      <div class="ashby-application-form-question-title">Resume</div>
+      <input type="file" name="resume" accept=".pdf,.doc,.docx" />
     </div>
 
     <button type="submit" id="submit-application">Submit Application</button>
@@ -69,41 +89,30 @@
   </div>
 
   <script>
+    // Mirror live Ashby: clicking a Yes/No option sets aria-pressed.
+    document.querySelectorAll('[data-field-path="workAuthorization"] button[data-value]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        btn.parentElement.querySelectorAll('button[data-value]').forEach((b) => {
+          b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+        });
+      });
+    });
+
     window.AshbyTest = {
       results: [],
-      
       log(msg, status = 'info') {
         this.results.push({ msg, status });
-        document.getElementById('results').innerHTML = this.results.map(r => 
+        document.getElementById('results').innerHTML = this.results.map(r =>
           `<div style="color: ${r.status==='success'?'green':r.status==='error'?'red':'black'}">
             ${r.status==='success'?'✓':r.status==='error'?'✗':'•'} ${r.msg}
           </div>`
         ).join('');
       },
-      
       run() {
         const fields = document.querySelectorAll('[data-field-path]');
         this.log(`Found ${fields.length} Ashby fields`, fields.length > 0 ? 'success' : 'error');
-        
-        // Test Yes/No buttons
-        const yesBtn = document.querySelector('._option_y2cw4');
-        if (yesBtn) {
-          this.log('Yes/No buttons detected', 'success');
-          setTimeout(() => {
-            yesBtn.click();
-            yesBtn.setAttribute('aria-pressed', 'true');
-            this.log('Simulated Yes button click', 'info');
-          }, 1000);
-        }
-        
-        // Check for save indicators
-        setTimeout(() => {
-          const indicators = document.querySelectorAll('.jobfitly-saved-indicator');
-          this.log(`Save indicators: ${indicators.length} found`, indicators.length > 0 ? 'success' : 'error');
-        }, 3000);
       }
     };
-    
     // Do not auto-run on load — pollutes UI e2e forms.
   </script>
 </body>

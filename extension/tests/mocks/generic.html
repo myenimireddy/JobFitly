@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Generic HTML application fixture</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 16px; }
+    .field { margin-bottom: 16px; }
+    label { display: block; font-weight: 600; margin-bottom: 4px; }
+    input[type="text"], input[type="email"], input[type="tel"], textarea, select {
+      width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Generic Application Form</h1>
+  <form id="generic-form">
+    <div class="field" data-testid="ks-text">
+      <label for="fullName">Full Name</label>
+      <input id="fullName" name="fullName" type="text" />
+    </div>
+    <div class="field">
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" />
+    </div>
+    <div class="field">
+      <label for="phone">Phone</label>
+      <input id="phone" name="phone" type="tel" />
+    </div>
+    <div class="field" data-testid="ks-textarea">
+      <label for="notes">Additional notes</label>
+      <textarea id="notes" name="notes" rows="3"></textarea>
+    </div>
+    <div class="field" data-testid="ks-select">
+      <label for="country">Country</label>
+      <select id="country" name="country">
+        <option value="">Select...</option>
+        <option>United States</option>
+        <option>Canada</option>
+        <option>United Kingdom</option>
+      </select>
+    </div>
+    <div class="field" data-testid="ks-radio">
+      <fieldset>
+        <legend>Authorized to work in the US?</legend>
+        <label><input type="radio" name="workAuth" value="Yes"> Yes</label>
+        <label><input type="radio" name="workAuth" value="No"> No</label>
+      </fieldset>
+    </div>
+    <div class="field" data-testid="ks-checkbox">
+      <label><input type="checkbox" name="terms" value="1"> I agree to the terms</label>
+    </div>
+    <div class="field" data-testid="ks-file">
+      <label for="resume">Resume</label>
+      <input id="resume" name="resume" type="file" accept=".pdf,.doc,.docx" />
+    </div>
+    <button type="submit">Submit</button>
+  </form>
+</body>
+</html>

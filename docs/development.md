@@ -1,5 +1,7 @@
 # Development
 
+Lifecycle (design → test → release): **[process.md](process.md)**. This page is commands and layout only.
+
 ## Quick start (`make`)
 
 ```bash

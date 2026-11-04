@@ -1,0 +1,87 @@
+{
+  "_meta": {
+    "updatedAt": "2026-11-02",
+    "note": "Machine status for portal × control coverage. green = fixture + offline kitchen-sink assert pass. red = gap. deferred = known out of scope for now. Sources for real DOM examples live in extension/e2e/fixtures/consolidated-fill-context.json _meta.sources.",
+    "e2eFlakeNote": "UI matrix data→greenhouse 7m timeout on slow Ollama is a flake — not a coverage sheet fail. Retry with Groq if it recurs."
+  },
+  "controls": [
+    "text_input",
+    "textarea",
+    "native_select",
+    "radio",
+    "checkbox",
+    "custom_select",
+    "file_input",
+    "multipage_continue"
+  ],
+  "portals": [
+    "greenhouse_classic",
+    "greenhouse_job_board",
+    "lever",
+    "ashby",
+    "workday",
+    "generic"
+  ],
+  "cells": {
+    "greenhouse_classic": {
+      "text_input": { "status": "green", "note": "First/Last/Email/Phone" },
+      "textarea": { "status": "green", "note": "Cover letter kitchen-sink" },
+      "native_select": { "status": "green", "note": "Onsite + EEO selects" },
+      "radio": { "status": "green", "note": "Sponsorship kitchen-sink" },
+      "checkbox": { "status": "green", "note": "Consent kitchen-sink" },
+      "custom_select": { "status": "deferred", "note": "Classic boards use native select only; React-Select covered under greenhouse_job_board" },
+      "file_input": { "status": "green", "note": "Resume file present; inject skips" },
+      "multipage_continue": { "status": "deferred", "note": "Single-page fixture" }
+    },
+    "greenhouse_job_board": {
+      "text_input": { "status": "green", "note": "Name/email/phone/linkedin" },
+      "textarea": { "status": "green", "note": "Cover letter kitchen-sink" },
+      "native_select": { "status": "green", "note": "Native gender select kitchen-sink" },
+      "radio": { "status": "green", "note": "Sponsorship radios" },
+      "checkbox": { "status": "green", "note": "Consent checkbox" },
+      "custom_select": { "status": "green", "note": "React-Select country/location/workauth" },
+      "file_input": { "status": "green", "note": "Resume/CV; inject skips" },
+      "multipage_continue": { "status": "deferred", "note": "Single-page fixture" }
+    },
+    "lever": {
+      "text_input": { "status": "green", "note": "Name/email/phone" },
+      "textarea": { "status": "green", "note": "Cover letter" },
+      "native_select": { "status": "green", "note": "How did you hear" },
+      "radio": { "status": "green", "note": "Work authorization" },
+      "checkbox": { "status": "green", "note": "Pronouns checkboxes" },
+      "custom_select": { "status": "deferred", "note": "Lever apply forms use native select / radios in observed DOM" },
+      "file_input": { "status": "green", "note": "Resume file; inject skips" },
+      "multipage_continue": { "status": "deferred", "note": "Single-page fixture" }
+    },
+    "ashby": {
+      "text_input": { "status": "green", "note": "Name/email/phone" },
+      "textarea": { "status": "green", "note": "Cover letter" },
+      "native_select": { "status": "green", "note": "Source kitchen-sink" },
+      "radio": { "status": "green", "note": "Experience level" },
+      "checkbox": { "status": "green", "note": "Consent kitchen-sink" },
+      "custom_select": { "status": "green", "note": "Yes/No button group (work auth)" },
+      "file_input": { "status": "green", "note": "Resume file; inject skips" },
+      "multipage_continue": { "status": "deferred", "note": "Single-page fixture" }
+    },
+    "workday": {
+      "text_input": { "status": "green", "note": "Name/email/phone/linkedin + experience rows" },
+      "textarea": { "status": "green", "note": "Additional information kitchen-sink" },
+      "native_select": { "status": "green", "note": "Hear-about native select" },
+      "radio": { "status": "green", "note": "Work auth radios" },
+      "checkbox": { "status": "green", "note": "Sponsorship checkbox" },
+      "custom_select": { "status": "green", "note": "Country/State listbox → document-level responsiveMonikerPrompt (live WD pattern); filled only if trigger commits", "source": "https://adobe.wd5.myworkdayjobs.com/.../apply/applyManually" },
+      "file_input": { "status": "green", "note": "Resume file; inject skips" },
+      "multipage_continue": { "status": "deferred", "note": "Multi-step wizard tracked separately (#32)" }
+    },
+    "generic": {
+      "text_input": { "status": "green", "note": "Standard labeled inputs" },
+      "textarea": { "status": "green", "note": "Notes textarea" },
+      "native_select": { "status": "green", "note": "Country select" },
+      "radio": { "status": "green", "note": "Work auth radios" },
+      "checkbox": { "status": "green", "note": "Terms checkbox" },
+      "custom_select": { "status": "deferred", "note": "Generic path is native controls only" },
+      "file_input": { "status": "green", "note": "Resume file; inject skips" },
+      "multipage_continue": { "status": "deferred", "note": "N/A" }
+    }
+  }
+}

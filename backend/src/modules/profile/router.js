@@ -63,8 +63,22 @@ router.post('/upload', (req, res, next) => {
 });
 
 /**
+ * GET /api/profile
+ * Summaries for profile switcher (id, name, captureComplete) — no rawText.
+ */
+router.get('/', async (req, res) => {
+  try {
+    const data = await profileService.listSummaries();
+    res.json({ success: true, data, error: null });
+  } catch (error) {
+    res.status(500).json({ success: false, data: null, error: error.message });
+  }
+});
+
+/**
  * GET /api/profile/latest
- * Newest complete resume, or newest row if none are marked complete
+ * Newest complete resume, or newest row if none are marked complete.
+ * Prefer explicit profile id in the extension; use this only when the user opts in.
  */
 router.get('/latest', async (req, res) => {
   try {

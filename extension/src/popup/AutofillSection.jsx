@@ -11,8 +11,7 @@ import {
   sendMessageSafe,
   sleep,
 } from '../lib/contentBridge';
-
-const API_BASE = 'http://localhost:3000/api';
+import { getApiBase } from '../lib/apiConfig';
 
 function looksLikeDialCode(text) {
   const t = String(text || '').trim();
@@ -315,7 +314,7 @@ async function injectOne(tabId, profileId, label, answer, experienceIndex = null
   const ok = (count > 0 && !failed.some((f) => f.label === label)) || okLabels.includes(label);
   if (ok) {
     try {
-      await fetch(`${API_BASE}/autofill/save-answers`, {
+      await fetch(`${await getApiBase()}/autofill/save-answers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ profileId, answers: [{ label, answer: String(answer).trim() }] }),
@@ -492,7 +491,7 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
     setDraftingAi(true);
     setAskAiError(null);
     try {
-      const response = await fetch(`${API_BASE}/autofill/draft`, {
+      const response = await fetch(`${await getApiBase()}/autofill/draft`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -568,7 +567,7 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
       const scrapedComplete = scraped.fields.filter((f) => isPageValueComplete(f.currentValue, f)).length;
 
       setProgressLabel('Matching answers…');
-      const response = await fetch(`${API_BASE}/autofill/generate`, {
+      const response = await fetch(`${await getApiBase()}/autofill/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

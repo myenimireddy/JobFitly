@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-
-const API = 'http://localhost:3000/api';
+import { getApiBase } from '../lib/apiConfig';
 
 const GROUPS = [
   { id: 'identity', title: 'Identity' },
@@ -45,7 +44,7 @@ export function ApplicationProfileCapture({ profileId, onSaved, onSkip, compact 
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`${API}/profile/${profileId}/application-capture`);
+        const res = await fetch(`${await getApiBase()}/profile/${profileId}/application-capture`);
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || 'Failed to load capture form');
         if (cancelled) return;
@@ -84,7 +83,7 @@ export function ApplicationProfileCapture({ profileId, onSaved, onSkip, compact 
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(`${API}/profile/${profileId}/application-profile`, {
+      const res = await fetch(`${await getApiBase()}/profile/${profileId}/application-profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ applicationProfile: values }),

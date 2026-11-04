@@ -6,6 +6,6 @@
     "prepare": "make install-hooks",
     "test:fast": "make test-fast",
     "test": "make test-fast",
-    "generate:fake-resumes": "node scripts/fake-resumes/generate.mjs"
+    "generate:fake-resumes": "npm install --prefix scripts/fake-resumes --no-fund --no-audit && node scripts/fake-resumes/generate.mjs"
   }
 }

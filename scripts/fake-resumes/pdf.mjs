@@ -1,155 +1,143 @@
 /**
- * Minimal single-page (or multi-page) text PDF writer — no npm deps.
- * Helvetica only; ASCII-safe text recommended.
+ * Sample resume PDF writer via PDFKit (produces pdf-parse-compatible files).
+ * Helvetica only; non-ASCII is stripped to ASCII.
+ *
+ * Requires: (cd scripts/fake-resumes && npm install)
  */
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
-function pdfEscape(text) {
+const require = createRequire(import.meta.url);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+function loadPdfkit() {
+  try {
+    return require('pdfkit');
+  } catch {
+    try {
+      return require(path.join(__dirname, 'node_modules', 'pdfkit'));
+    } catch {
+      throw new Error(
+        'Missing pdfkit. Run: (cd scripts/fake-resumes && npm install)',
+      );
+    }
+  }
+}
+
+const PDFDocument = loadPdfkit();
+
+function toAscii(text) {
   return String(text)
-    .replace(/\\/g, '\\\\')
-    .replace(/\(/g, '\\(')
-    .replace(/\)/g, '\\)');
+    .normalize('NFKD')
+    .replace(/[^\x20-\x7E\n]/g, '');
 }
 
 /**
- * @param {string[]} lines - plain text lines (will wrap externally)
+ * @param {string[]} lines - plain text lines (markdown-ish markers from generate.mjs)
  * @param {{ title?: string }} [meta]
- * @returns {Buffer}
+ * @returns {Promise<Buffer>}
  */
 export function buildTextPdf(lines, meta = {}) {
-  const pageWidth = 612;
-  const pageHeight = 792;
-  const marginLeft = 54;
-  const marginTop = 54;
-  const fontSize = 10;
-  const lineHeight = 13;
-  const maxY = pageHeight - 54;
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({
+      size: 'LETTER',
+      margin: 54,
+      // Uncompressed streams parse more reliably with older extractors.
+      compress: false,
+      info: {
+        Title: toAscii(meta.title || 'Resume'),
+        Producer: 'JobFitly fake-resume generator',
+        Creator: 'JobFitly',
+      },
+    });
 
-  const pages = [];
-  let y = pageHeight - marginTop;
-  let content = [];
+    const chunks = [];
+    doc.on('data', (c) => chunks.push(c));
+    doc.on('error', reject);
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
 
-  const flushPage = () => {
-    pages.push(content.join('\n'));
-    content = [];
-    y = pageHeight - marginTop;
-  };
+    const pageWidth = 612;
+    const left = 54;
+    const maxWidth = pageWidth - 54 * 2;
+    let y = 54;
 
-  const drawLine = (text, size = fontSize, style = '') => {
-    if (y < 54) flushPage();
-    const font = style === 'B' ? 'F2' : style === 'I' ? 'F3' : 'F1';
-    content.push('BT');
-    content.push(`/${font} ${size} Tf`);
-    content.push(`${marginLeft} ${y} Td`);
-    content.push(`(${pdfEscape(text)}) Tj`);
-    content.push('ET');
-    y -= lineHeight * (size / fontSize);
-  };
+    const ensureSpace = (need = 14) => {
+      if (y + need > 742) {
+        doc.addPage();
+        y = 54;
+      }
+    };
 
-  for (const raw of lines) {
-    if (raw === '---') {
-      // thin rule
-      if (y < 54) flushPage();
-      content.push('0.4 w');
-      content.push(`${marginLeft} ${y + 4} m ${pageWidth - marginLeft} ${y + 4} l S`);
-      y -= 8;
-      continue;
+    const drawLine = (text, size = 10, style = '') => {
+      const t = toAscii(text);
+      ensureSpace(size + 4);
+      doc.font(style === 'B' ? 'Helvetica-Bold' : style === 'I' ? 'Helvetica-Oblique' : 'Helvetica');
+      doc.fontSize(size);
+      doc.fillColor('#000000');
+      doc.text(t, left, y, { width: maxWidth, lineBreak: false });
+      y += size * 1.3;
+    };
+
+    for (const raw of lines) {
+      if (raw === '---') {
+        ensureSpace(12);
+        doc
+          .save()
+          .strokeColor('#666666')
+          .lineWidth(0.5)
+          .moveTo(left, y + 2)
+          .lineTo(pageWidth - 54, y + 2)
+          .stroke()
+          .restore();
+        y += 10;
+        continue;
+      }
+      if (raw.startsWith('## ')) {
+        y += 4;
+        drawLine(raw.slice(3), 11, 'B');
+        continue;
+      }
+      if (raw.startsWith('# ')) {
+        drawLine(raw.slice(2), 18, 'B');
+        y += 4;
+        continue;
+      }
+      if (raw.startsWith('**') && raw.endsWith('**')) {
+        drawLine(raw.slice(2, -2), 10, 'B');
+        continue;
+      }
+      if (raw.startsWith('_') && raw.endsWith('_')) {
+        drawLine(raw.slice(1, -1), 9, 'I');
+        continue;
+      }
+      if (!String(raw).trim()) {
+        y += 6;
+        continue;
+      }
+      ensureSpace(14);
+      doc.font('Helvetica').fontSize(10).fillColor('#000000');
+      const h = doc.heightOfString(toAscii(raw), { width: maxWidth });
+      ensureSpace(h);
+      doc.text(toAscii(raw), left, y, { width: maxWidth });
+      y += h + 2;
     }
-    if (raw.startsWith('## ')) {
-      drawLine(raw.slice(3), 11, 'B');
-      continue;
-    }
-    if (raw.startsWith('# ')) {
-      drawLine(raw.slice(2), 18, 'B');
-      y -= 4;
-      continue;
-    }
-    if (raw.startsWith('**') && raw.endsWith('**')) {
-      drawLine(raw.slice(2, -2), 10, 'B');
-      continue;
-    }
-    if (raw.startsWith('_') && raw.endsWith('_')) {
-      drawLine(raw.slice(1, -1), 9, 'I');
-      continue;
-    }
-    drawLine(raw, fontSize, '');
-  }
 
-  // footer on last page buffer before flush
-  const footer = 'Fictional JobFitly demo resume - not a real person';
-  if (y < 40) flushPage();
-  content.push('BT');
-  content.push('/F3 8 Tf');
-  content.push(`${marginLeft} 28 Td`);
-  content.push(`(${pdfEscape(footer)}) Tj`);
-  content.push('ET');
-  flushPage();
+    doc
+      .font('Helvetica-Oblique')
+      .fontSize(8)
+      .fillColor('#666666')
+      .text('Fictional JobFitly demo resume - not a real person', left, 760, {
+        width: maxWidth,
+      });
 
-  const objects = [];
-  const add = (body) => {
-    objects.push(body);
-    return objects.length;
-  };
-
-  add('<< /Type /Catalog /Pages 2 0 R >>');
-  const kids = [];
-  const pageObjIndexes = [];
-
-  // placeholder for pages dict — object 2
-  add('PAGES_PLACEHOLDER');
-
-  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'); // 3 F1
-  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>'); // 4 F2
-  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique >>'); // 5 F3
-
-  const contentIds = [];
-  for (const pageContent of pages) {
-    const stream = pageContent;
-    const id = add(
-      `<< /Length ${Buffer.byteLength(stream, 'utf8')} >>\nstream\n${stream}\nendstream`,
-    );
-    contentIds.push(id);
-  }
-
-  for (let i = 0; i < pages.length; i++) {
-    const id = add(
-      [
-        '<< /Type /Page',
-        `/Parent 2 0 R`,
-        `/MediaBox [0 0 ${pageWidth} ${pageHeight}]`,
-        `/Contents ${contentIds[i]} 0 R`,
-        '/Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >>',
-        '>>',
-      ].join(' '),
-    );
-    pageObjIndexes.push(id);
-    kids.push(`${id} 0 R`);
-  }
-
-  objects[1] = `<< /Type /Pages /Kids [${kids.join(' ')}] /Count ${pages.length} >>`;
-
-  const title = pdfEscape(meta.title || 'Resume');
-  add(`<< /Title (${title}) /Producer (JobFitly fake-resume generator) >>`);
-
-  let pdf = '%PDF-1.4\n';
-  const offsets = [0];
-  for (let i = 0; i < objects.length; i++) {
-    offsets.push(Buffer.byteLength(pdf, 'utf8'));
-    pdf += `${i + 1} 0 obj\n${objects[i]}\nendobj\n`;
-  }
-  const xrefPos = Buffer.byteLength(pdf, 'utf8');
-  pdf += `xref\n0 ${objects.length + 1}\n`;
-  pdf += '0000000000 65535 f \n';
-  for (let i = 1; i <= objects.length; i++) {
-    pdf += `${String(offsets[i]).padStart(10, '0')} 00000 n \n`;
-  }
-  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R /Info ${objects.length} 0 R >>\n`;
-  pdf += `startxref\n${xrefPos}\n%%EOF\n`;
-  return Buffer.from(pdf, 'utf8');
+    doc.end();
+  });
 }
 
 /** @param {string} text @param {number} maxChars */
 export function wrapText(text, maxChars = 88) {
-  const words = String(text).split(/\s+/);
+  const words = toAscii(text).split(/\s+/).filter(Boolean);
   const lines = [];
   let cur = '';
   for (const w of words) {

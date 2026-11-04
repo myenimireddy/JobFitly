@@ -1,17 +1,84 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 /**
  * Profile upload / summary for the side panel.
+ * Clear = local UI only. Delete = permanent backend + local clear (confirm first).
+ * Multi-profile: explicit switcher; /latest only via "Load latest on this machine".
  */
-export function ProfileSection({ profile, loading, onUpload, onClear, compact = false }) {
+export function ProfileSection({
+  profile,
+  profileSummaries = [],
+  loading,
+  onUpload,
+  onClear,
+  onDelete,
+  onSelectProfile,
+  onLoadLatest,
+  compact = false,
+}) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const skillCount = profile?.parsedData?.skills?.length ?? profile?.skills?.length ?? 0;
   const name = profile?.parsedData?.personalInfo?.fullName || profile?.name || 'Candidate';
+  const showSwitcher = profileSummaries.length > 1;
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) onUpload(file);
     e.target.value = '';
   };
+
+  const deleteControls = (
+    <>
+      {confirmDelete ? (
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(false)}
+            disabled={loading}
+            className="text-[10px] text-slate-400 hover:text-slate-200 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            data-testid="confirm-delete-profile"
+            onClick={async () => {
+              setConfirmDelete(false);
+              await onDelete?.();
+            }}
+            disabled={loading || !onDelete}
+            className="text-[10px] text-red-400 hover:text-red-300 font-medium disabled:opacity-50"
+          >
+            Yes, delete
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={onClear}
+            disabled={loading}
+            className="text-[10px] text-slate-500 hover:text-slate-300 disabled:opacity-50"
+            title="Hide profile in this panel only (keeps local DB row)"
+          >
+            {skillCount === 0 && !compact ? 'Re-upload' : 'Clear'}
+          </button>
+          {onDelete ? (
+            <button
+              type="button"
+              data-testid="delete-profile"
+              onClick={() => setConfirmDelete(true)}
+              disabled={loading}
+              className="text-[10px] text-red-400/90 hover:text-red-300 disabled:opacity-50"
+              title="Permanently delete from local database"
+            >
+              Delete
+            </button>
+          ) : null}
+        </div>
+      )}
+    </>
+  );
 
   if (compact && profile) {
     return (
@@ -22,14 +89,7 @@ export function ProfileSection({ profile, loading, onUpload, onClear, compact = 
             <span className="text-slate-500"> · {skillCount} skills</span>
           ) : null}
         </p>
-        <button
-          type="button"
-          onClick={onClear}
-          disabled={loading}
-          className="text-[10px] text-slate-500 hover:text-slate-300 shrink-0 disabled:opacity-50"
-        >
-          Clear
-        </button>
+        {deleteControls}
       </div>
     );
   }
@@ -67,6 +127,17 @@ export function ProfileSection({ profile, loading, onUpload, onClear, compact = 
           <p className="text-[10px] text-slate-500 text-center mt-1.5">
             Max 5MB · PDF only
           </p>
+          {profileSummaries.length > 0 && onLoadLatest ? (
+            <button
+              type="button"
+              data-testid="load-latest-profile"
+              onClick={onLoadLatest}
+              disabled={loading}
+              className="mt-2 w-full text-[11px] text-indigo-300 hover:text-indigo-200 underline disabled:opacity-50"
+            >
+              Load latest on this machine ({profileSummaries.length} saved)
+            </button>
+          ) : null}
         </div>
       ) : (
         <div className="bg-slate-800/80 rounded-lg p-3 border border-slate-700/80">
@@ -76,17 +147,41 @@ export function ProfileSection({ profile, loading, onUpload, onClear, compact = 
               <p className={`text-[11px] ${skillCount > 0 ? 'text-green-400/90' : 'text-amber-400/90'}`}>
                 {skillCount > 0 ? `${skillCount} skills parsed` : 'No skills found — re-upload'}
               </p>
+              {profile?.id ? (
+                <p className="text-[10px] text-slate-500 mt-0.5 font-mono truncate" title={profile.id}>
+                  id {profile.id.slice(0, 8)}…
+                </p>
+              ) : null}
             </div>
-            <button
-              type="button"
-              onClick={onClear}
-              disabled={loading}
-              className="text-[11px] text-indigo-400 hover:text-indigo-300 disabled:opacity-50 shrink-0"
-            >
-              {skillCount === 0 ? 'Re-upload' : 'Clear'}
-            </button>
+            {deleteControls}
           </div>
-          {skillCount === 0 && (
+
+          {showSwitcher && onSelectProfile ? (
+            <label className="block mt-2">
+              <span className="text-[10px] text-slate-500">Switch profile</span>
+              <select
+                data-testid="profile-switcher"
+                className="mt-0.5 w-full rounded-md bg-slate-900 border border-slate-600 px-2 py-1.5 text-xs text-slate-100"
+                value={profile.id}
+                disabled={loading}
+                onChange={(e) => onSelectProfile(e.target.value)}
+              >
+                {profileSummaries.map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.name}{row.captureComplete ? '' : ' (incomplete)'}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
+          {confirmDelete && (
+            <p className="text-[10px] text-red-300/90 mt-2 leading-relaxed">
+              Permanently removes this resume and match history from the local database.
+              Clear only hides it in this panel.
+            </p>
+          )}
+          {skillCount === 0 && !confirmDelete && (
             <p className="text-[11px] text-amber-300/80 mt-2 leading-relaxed">
               Re-upload so autofill has skills and work history to draft from.
             </p>

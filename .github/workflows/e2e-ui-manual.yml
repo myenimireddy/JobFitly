@@ -73,7 +73,9 @@ jobs:
           printf '%s\n' '{"forceOllama":false}' > backend/data/llm-settings.json
 
       - name: Generate demo resume PDFs
-        run: node scripts/fake-resumes/generate.mjs
+        run: |
+          npm install --prefix scripts/fake-resumes --no-fund --no-audit
+          node scripts/fake-resumes/generate.mjs
 
       - name: Build extension
         run: make build-extension

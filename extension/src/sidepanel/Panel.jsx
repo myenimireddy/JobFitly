@@ -1,6 +1,6 @@
 /**
  * Primary extension UI — Chrome Side Panel (stays open while the user clicks the form).
- * Composes Profile / Match / Autofill from ../popup/ plus Settings (Groq key).
+ * Composes Profile / Match / Autofill from ../popup/ plus Settings (API base + Groq).
  * Toolbar click opens this panel via background.js (not a transient popup).
  */
 import React, { useState, useEffect, useCallback } from 'react';
@@ -38,6 +38,7 @@ function shortenHost(url) {
 
 export function Panel() {
   const [profile, setProfile] = useState(null);
+  const [profileSummaries, setProfileSummaries] = useState([]);
   const [loadingText, setLoadingText] = useState('');
   const [backendOnline, setBackendOnline] = useState(false);
   const [tabInfo, setTabInfo] = useState({ id: null, title: '', url: '', host: '' });
@@ -46,7 +47,17 @@ export function Panel() {
   const [showCapture, setShowCapture] = useState(false);
   /** Last http(s) tab in this window — Fill Form target when Side Panel is not native. */
   const [jobTabId, setJobTabId] = useState(null);
-  const { loading, error, uploadResume, checkBackend, clearError } = useApi();
+  const {
+    loading,
+    error,
+    uploadResume,
+    deleteProfile,
+    listProfiles,
+    fetchProfile,
+    fetchLatestProfile,
+    checkBackend,
+    clearError,
+  } = useApi();
   const version = chrome.runtime.getManifest().version;
   const captureComplete = !!profile?.parsedData?.applicationProfile?.captureComplete;
 
@@ -65,7 +76,6 @@ export function Panel() {
         });
         return;
       }
-      // Extension/side-panel tab is active — keep showing last job tab host if any.
       if (jobTabId != null) {
         try {
           const job = await chrome.tabs.get(jobTabId);
@@ -112,38 +122,61 @@ export function Panel() {
     }
   }, []);
 
+  const refreshSummaries = useCallback(async () => {
+    try {
+      const rows = await listProfiles();
+      setProfileSummaries(rows);
+    } catch {
+      setProfileSummaries([]);
+    }
+  }, [listProfiles]);
+
+  const applyProfile = useCallback(async (data) => {
+    if (!data?.id) return;
+    setProfile(data);
+    await setProfileId(data.id);
+    await syncProfileIdToPage(data.id);
+    setShowCapture(!data?.parsedData?.applicationProfile?.captureComplete);
+    await refreshSummaries();
+  }, [syncProfileIdToPage, refreshSummaries]);
+
   useEffect(() => {
     const init = async () => {
-      setBackendOnline(await checkBackend());
+      const online = await checkBackend();
+      setBackendOnline(online);
       await refreshActiveTab();
+      if (online) {
+        try {
+          await refreshSummaries();
+        } catch { /* ignore */ }
+      }
+
       let savedProfileId = await getProfileId();
       if (!savedProfileId) {
         savedProfileId = await getPageProfileId();
         if (savedProfileId) await setProfileId(savedProfileId);
       }
+
+      // Only load an explicit id — never silently swap to /latest.
+      if (!savedProfileId) return;
       try {
-        let result = null;
-        if (savedProfileId) {
-          const response = await fetch(`http://localhost:3000/api/profile/${savedProfileId}`);
-          if (response.ok) result = await response.json();
-        }
-        if (!result?.data) {
-          const response = await fetch('http://localhost:3000/api/profile/latest');
-          if (response.ok) result = await response.json();
-        }
-        if (result?.success && result.data) {
-          setProfile(result.data);
-          await setProfileId(result.data.id);
-          if (!result.data?.parsedData?.applicationProfile?.captureComplete) {
-            setShowCapture(true);
-          }
-        }
+        const data = await fetchProfile(savedProfileId);
+        await applyProfile(data);
       } catch (err) {
-        console.error('Failed to load profile:', err);
+        console.warn('[JobFitly] Saved profile missing; clear and upload or load latest.', err);
+        await clearProfileId();
+        setProfile(null);
       }
     };
     init();
-  }, [checkBackend, getPageProfileId, refreshActiveTab]);
+  }, [
+    checkBackend,
+    getPageProfileId,
+    refreshActiveTab,
+    fetchProfile,
+    applyProfile,
+    refreshSummaries,
+  ]);
 
   useEffect(() => {
     const onActivated = () => { refreshActiveTab(); };
@@ -163,14 +196,12 @@ export function Panel() {
     setLoadingText('Uploading resume…');
     try {
       const data = await uploadResume(file);
-      setProfile(data);
-      await setProfileId(data.id);
-      await syncProfileIdToPage(data.id);
+      await applyProfile(data);
       setShowCapture(true);
     } finally {
       setLoadingText('');
     }
-  }, [uploadResume, clearError, syncProfileIdToPage]);
+  }, [uploadResume, clearError, applyProfile]);
 
   const handleClear = useCallback(async () => {
     setProfile(null);
@@ -178,9 +209,54 @@ export function Panel() {
     await clearProfileId();
     await syncProfileIdToPage(null);
     clearError();
-  }, [clearError, syncProfileIdToPage]);
+    await refreshSummaries();
+  }, [clearError, syncProfileIdToPage, refreshSummaries]);
 
-  const displayError = error || (!backendOnline ? 'Backend offline — run make dev-backend' : null);
+  const handleDelete = useCallback(async () => {
+    const id = profile?.id;
+    clearError();
+    if (id) {
+      try {
+        await deleteProfile(id);
+      } catch {
+        return;
+      }
+    }
+    setProfile(null);
+    setShowCapture(false);
+    await clearProfileId();
+    await syncProfileIdToPage(null);
+    await refreshSummaries();
+  }, [profile?.id, deleteProfile, clearError, syncProfileIdToPage, refreshSummaries]);
+
+  const handleSelectProfile = useCallback(async (id) => {
+    if (!id || id === profile?.id) return;
+    clearError();
+    setLoadingText('Loading profile…');
+    try {
+      const data = await fetchProfile(id);
+      await applyProfile(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingText('');
+    }
+  }, [profile?.id, fetchProfile, applyProfile, clearError]);
+
+  const handleLoadLatest = useCallback(async () => {
+    clearError();
+    setLoadingText('Loading latest profile…');
+    try {
+      const data = await fetchLatestProfile();
+      await applyProfile(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingText('');
+    }
+  }, [fetchLatestProfile, applyProfile, clearError]);
+
+  const displayError = error || (!backendOnline ? 'Backend offline — run ./scripts/start.sh' : null);
 
   return (
     <div className="h-screen w-full min-w-[280px] bg-slate-900 text-slate-100 flex flex-col">
@@ -222,12 +298,15 @@ export function Panel() {
         <div className={fillActive ? 'opacity-70' : ''}>
           <ProfileSection
             profile={profile}
-            loading={loading && loadingText.toLowerCase().includes('upload')}
+            profileSummaries={profileSummaries}
+            loading={loading || !!loadingText}
             onUpload={handleUpload}
             onClear={handleClear}
+            onDelete={handleDelete}
+            onSelectProfile={handleSelectProfile}
+            onLoadLatest={handleLoadLatest}
             compact={fillActive}
           />
-          {/* data-testid for Playwright extension-UI e2e */}
           <div
             aria-hidden="true"
             data-testid="panel-ready"
@@ -244,6 +323,7 @@ export function Panel() {
               if (updated?.parsedData?.applicationProfile?.captureComplete) {
                 setShowCapture(false);
               }
+              refreshSummaries();
             }}
             onSkip={() => setShowCapture(false)}
           />
@@ -286,8 +366,8 @@ export function Panel() {
 
         {!profile && (
           <p className="px-4 text-xs text-slate-500 leading-relaxed">
-            Upload a resume to score jobs and autofill. This side panel stays open while you click
-            the form.
+            Upload a resume to score jobs and autofill. Clear only hides the profile here; Delete
+            removes it from the local database. This side panel stays open while you click the form.
           </p>
         )}
       </div>
@@ -301,8 +381,22 @@ export function Panel() {
           {' · '}Analyze → decide · Never Submit · Review AI drafts
         </p>
       </footer>
-      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-      <Spinner text={loadingText} show={loading} />
+      <SettingsPanel
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onSaved={async (payload) => {
+          setBackendOnline(await checkBackend());
+          // New API origin → old profileId may 404; clear panel like Clear.
+          if (payload?.apiOrigin) {
+            setProfile(null);
+            setShowCapture(false);
+            await clearProfileId();
+            await syncProfileIdToPage(null);
+          }
+          await refreshSummaries();
+        }}
+      />
+      <Spinner text={loadingText} show={loading || !!loadingText} />
     </div>
   );
 }

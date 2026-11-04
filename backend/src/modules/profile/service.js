@@ -161,6 +161,30 @@ class ProfileService {
   }
 
   /**
+   * Lightweight list for Side Panel / web profile switcher (no rawText).
+   * @returns {Promise<Array<{ id: string, name: string, createdAt: Date, captureComplete: boolean }>>}
+   */
+  async listSummaries() {
+    const rows = await prisma.profile.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    return rows.map((row) => {
+      const data = parsedOf(row);
+      const name =
+        data?.personalInfo?.fullName
+        || data?.applicationProfile?.displayName
+        || 'Untitled profile';
+      return {
+        id: row.id,
+        name: String(name).trim() || 'Untitled profile',
+        createdAt: row.createdAt,
+        captureComplete: !!data?.applicationProfile?.captureComplete,
+      };
+    });
+  }
+
+  /**
    * Update the parsedData for a profile (user edits)
    * @param {string} id - Profile CUID
    * @param {Object} parsedData - Full updated parsedData object
@@ -239,14 +263,28 @@ class ProfileService {
   }
 
   /**
-   * Extract text from PDF buffer using pdf-parse
+   * Extract text from PDF buffer (pdf-parse).
+   * Unsupported / corrupt PDFs surface a clear message — no alternate parser.
    * @param {Buffer} pdfBuffer
    * @returns {Promise<string>}
    * @private
    */
   async extractTextFromPDF(pdfBuffer) {
-    const data = await pdfParse(pdfBuffer);
-    return data.text || '';
+    try {
+      const data = await pdfParse(pdfBuffer);
+      const text = (data.text || '').trim();
+      if (!text) {
+        throw new Error(
+          'This PDF has no readable text (it may be a scan or image-only). Export a text PDF from Word/Google Docs and try again.',
+        );
+      }
+      return text;
+    } catch (err) {
+      if (err?.message && /no readable text|scan or image/i.test(err.message)) throw err;
+      throw new Error(
+        'This PDF is not supported or could not be read. Please upload a standard text resume PDF (export from Word or Google Docs).',
+      );
+    }
   }
 }
 

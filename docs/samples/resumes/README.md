@@ -7,7 +7,7 @@ Phones are masked as `(000) 000-00NN` (not real numbers). **PDF files are gitign
 
 ```bash
 npm run generate:fake-resumes
-# or: node scripts/fake-resumes/generate.mjs
+# or: (cd scripts/fake-resumes && npm install) && node scripts/fake-resumes/generate.mjs
 ```
 
 JSON + `index.json` stay in git; CI regenerates PDFs before UI e2e.
