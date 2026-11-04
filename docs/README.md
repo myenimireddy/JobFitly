@@ -2,8 +2,9 @@
 
 | Doc | Audience |
 |-----|----------|
-| [setup.md](setup.md) | Beta testers — install, daily run, privacy, reporting bugs |
-| [beta.md](beta.md) | Known gaps / non-goals for the v1 beta |
+| **[process.md](process.md)** | **Design → develop → test → release (start here for workflow)** |
+| [setup.md](setup.md) | Beta testers — install, daily run, troubleshooting |
+| [beta.md](beta.md) | Product scope — what beta includes / excludes |
 | [development.md](development.md) | Developers — `make`, env, project layout, commands |
 | [portals.md](portals.md) | ATS support + adding a portal |
 | [portal-field-coverage.md](portal-field-coverage.md) | Portal × control-type green/red sheet |

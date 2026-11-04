@@ -29,7 +29,7 @@ Then in Chrome:
 5. Upload a resume PDF from [`docs/samples/resumes/`](samples/resumes/)  
    (`bootstrap.sh` generates them; if missing: `npm run generate:fake-resumes`)
 
-Known gaps and non-goals: **[beta.md](beta.md)**.
+Known gaps: **[beta.md](beta.md)**. Full design/dev/test/release flow: **[process.md](process.md)**.
 
 ---
 

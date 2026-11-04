@@ -31,12 +31,15 @@ Load `extension/dist/` unpacked on `chrome://extensions` (Developer mode).
 
 ## Workflow
 
+End-to-end process (design → develop → test → release): **[docs/process.md](docs/process.md)**.
+
+Short version:
+
 1. **Pick the layer** — backend planner, portal DOM, or Side Panel HITL. Don’t invent a second autofill path.
 2. **Match existing style** — CommonJS in `backend/`; ESM + Vite in `frontend/` and `extension/`.
-3. **Comment the why** — file headers explain ownership; avoid narrating obvious lines.
-4. **Test** — planner/sanitizer unit tests next to modules; offline portal mocks before live e2e.
-5. **Rebuild extension** after UI/DOM changes, then refresh on `chrome://extensions`.
-6. **No real PII** in fixtures, seeds, or committed screenshots (use the Alex Rivera mock pattern).
+3. **Test** — `make test-fast`; offline portal mocks before live e2e.
+4. **Rebuild extension** after UI/DOM changes, then refresh on `chrome://extensions`.
+5. **No real PII** in fixtures, seeds, or committed screenshots (fictional personas only).
 
 ## Hard rules (autofill)
 

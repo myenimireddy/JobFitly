@@ -34,8 +34,9 @@ Works with Greenhouse, Lever, Workday, Ashby, plus a generic HTML fallback — d
 
 Then load `extension/dist` in Chrome (`chrome://extensions` → Developer mode → Load unpacked).
 
-Full steps, troubleshooting, and how to report bugs: **[docs/setup.md](docs/setup.md)**  
-Beta known gaps: **[docs/beta.md](docs/beta.md)**
+Full steps & troubleshooting: **[docs/setup.md](docs/setup.md)**  
+Product scope (in / out of beta): **[docs/beta.md](docs/beta.md)**  
+**Design → develop → test → release:** **[docs/process.md](docs/process.md)**
 
 **Developers:** [docs/development.md](docs/development.md) · [CONTRIBUTING.md](CONTRIBUTING.md)
 
@@ -45,7 +46,9 @@ Beta known gaps: **[docs/beta.md](docs/beta.md)**
 
 | Doc | Topic |
 |-----|--------|
+| [docs/process.md](docs/process.md) | Design → develop → test → release |
 | [docs/setup.md](docs/setup.md) | Install & daily run |
+| [docs/beta.md](docs/beta.md) | Beta scope / gaps |
 | [docs/development.md](docs/development.md) | Make, env, layout |
 | [docs/portals.md](docs/portals.md) | ATS support |
 | [docs/llm-and-privacy.md](docs/llm-and-privacy.md) | Groq / Ollama / PII |
