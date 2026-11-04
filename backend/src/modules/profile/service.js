@@ -2,6 +2,7 @@ const pdfParse = require('pdf-parse');
 const { prisma } = require('../../lib/prisma');
 const { parseResumeWithLLM, normalizeParsedResume, computeConfidence, isCompleteParse } = require('../../lib/llmResumeParser');
 const { restoreScrubbedContacts } = require('../../lib/piiSanitizer');
+const safeLogger = require('../../lib/safeLogger');
 const {
   draftApplicationProfile,
   getCaptureQuestionnaire,
@@ -95,8 +96,7 @@ class ProfileService {
     console.log('\n━━━ [profile] PDF TEXT EXTRACTED ━━━');
     console.log(`  chars : ${rawText.length}`);
     console.log(`  lines : ${rawText.split('\n').filter(l => l.trim()).length}`);
-    console.log('  first 300 chars:');
-    console.log(' ', rawText.slice(0, 300).replace(/\n/g, '\n  '));
+    safeLogger.content('profile PDF text sample', rawText.slice(0, 300));
 
     const parsedData = await parseResumeWithLLM(rawText);
 

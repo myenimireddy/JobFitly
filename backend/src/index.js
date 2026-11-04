@@ -83,9 +83,9 @@ app.use('/api/settings', settingsRouter);
 // Global error handler
 app.use(errorHandler);
 
-const server = app.listen(config.port, () => {
+const server = app.listen(config.port, config.host, () => {
   const runtime = resolveLlmRuntime();
-  console.log(`Server running on port ${config.port} in ${config.nodeEnv} mode`);
+  console.log(`Server running at http://${config.host}:${config.port} in ${config.nodeEnv} mode`);
   console.log(`[llm] effective provider: ${runtime.provider} (source: ${runtime.source})`);
   if (runtime.provider === 'ollama') {
     const LLMFactory = require('./llm/factory');

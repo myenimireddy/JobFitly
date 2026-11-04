@@ -8,6 +8,7 @@
 
 const LLMFactory = require('../llm/factory');
 const { sanitizeProfile } = require('./piiSanitizer');
+const safeLogger = require('./safeLogger');
 
 const SYSTEM_PROMPT = `You are an expert technical recruiter and career advisor analyzing a candidate's fit for a job.
 
@@ -141,11 +142,11 @@ Produce the match analysis JSON.`;
 
     console.log('\n━━━ [llmMatchAnalyzer] RESULT ━━━');
     console.log(`  score      : ${result.score}`);
-    console.log(`  reasoning  : ${result.scoreReasoning}`);
+    console.log(`  reasoning  : ${result.scoreReasoning ? 'present' : 'missing'}`);
     console.log(`  matched    : [${result.matchingSkills.length}]`);
     console.log(`  missing    : [${result.missingSkills.length}]`);
     console.log(`  blockers   : [${result.blockers.length}]`);
-    result.blockers.forEach(b => console.log(`    ⚠ [${b.severity}] ${b.type}: ${b.message}`));
+    safeLogger.content('match blockers', result.blockers);
     console.log(`  pros       : [${result.pros.length}]`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 

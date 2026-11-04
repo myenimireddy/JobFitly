@@ -1,5 +1,6 @@
 const BaseLLM = require('./base');
 const config = require('../config');
+const safeLogger = require('../lib/safeLogger');
 
 /**
  * Ollama via local HTTP API (no `ollama` npm package — that package is ESM-only
@@ -52,10 +53,10 @@ class OllamaLLM extends BaseLLM {
   async extract(systemPrompt, userPrompt, timeoutMs) {
     console.log('\n━━━ [ollama] REQUEST ━━━');
     console.log(`  model  : ${this.model}`);
-    console.log(`  system : ${systemPrompt.slice(0, 200)}${systemPrompt.length > 200 ? '...' : ''}`);
+    console.log(`  system : ${systemPrompt.length} chars`);
     console.log(`  user   : ${userPrompt.length} chars`);
-    console.log('  user (first 400):');
-    console.log(' ', userPrompt.slice(0, 400).replace(/\n/g, '\n  '));
+    safeLogger.content('Ollama system prompt sample', systemPrompt.slice(0, 200));
+    safeLogger.content('Ollama user prompt sample', userPrompt.slice(0, 400));
     const t0 = Date.now();
 
     const TIMEOUT_MS = timeoutMs || 10 * 60 * 1000;
@@ -77,8 +78,7 @@ class OllamaLLM extends BaseLLM {
       const raw = response?.message?.content || '';
       console.log(`\n━━━ [ollama] RESPONSE (${Date.now() - t0}ms) ━━━`);
       console.log(`  length : ${raw.length} chars`);
-      console.log('  output:');
-      console.log(' ', raw.slice(0, 600).replace(/\n/g, '\n  '));
+      safeLogger.content('Ollama response sample', raw.slice(0, 600));
 
       try {
         const parsed = JSON.parse(raw.trim());

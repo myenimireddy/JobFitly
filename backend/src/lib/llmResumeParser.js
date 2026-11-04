@@ -196,7 +196,7 @@ async function parseResumeWithLLM(rawText) {
 
     let parsed = restoreScrubbedContacts(await onePass(), rawText);
     console.log('\n━━━ [llmParser] PARSED OUTPUT ━━━');
-    console.log('  personalInfo :', JSON.stringify(parsed.personalInfo));
+    console.log(`  personalInfo : ${parsed.personalInfo ? 'present' : 'missing'}`);
     console.log(`  skills       : [${parsed.skills.length}]`, parsed.skills.slice(0, 8));
     console.log(`  workExp      : ${parsed.workExperience.length} entries`);
     console.log(`  education    : ${parsed.education.length} entries`);
