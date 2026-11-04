@@ -1,0 +1,82 @@
+name: Beta feedback
+description: Testers — setup friction, Analyze quality, or Fill Form missfills (not a crash)
+title: "[beta] "
+labels: ["priority:beta"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying JobFitly. **Do not paste API keys or your real resume.**
+        Prefer a PDF from [`docs/samples/resumes/`](https://github.com/myenimireddy/JobFitly/tree/main/docs/samples/resumes).
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Feedback type
+      options:
+        - Setup / docs / videos unclear
+        - Analyze score or narrative
+        - Fill Form missfill or wrong field
+        - Settings / Groq / Backend URL
+        - General product feedback
+    validations:
+      required: true
+
+  - type: dropdown
+    id: portal
+    attributes:
+      label: ATS / portal (if Fill Form)
+      options:
+        - Not applicable
+        - Greenhouse
+        - Lever
+        - Workday
+        - Ashby
+        - Other / generic HTML
+    validations:
+      required: true
+
+  - type: input
+    id: job_url
+    attributes:
+      label: Job / apply URL (if relevant)
+      description: Public posting only. Redact secret-looking query tokens.
+      placeholder: "https://boards.greenhouse.io/..."
+
+  - type: input
+    id: field_label
+    attributes:
+      label: Field label on the form (if missfill)
+      placeholder: "e.g. Work authorization, Phone country"
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+      placeholder: What you wanted to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual
+      placeholder: What happened instead
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Extra notes (optional)
+      description: Setup step where you stuck, screenshot description, etc.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Before submitting
+      options:
+        - label: No API keys or real PII in this report
+          required: true
+        - label: I did not click Submit on a real application during this test
+          required: false

@@ -3,3 +3,12 @@ contact_links:
   - name: Beta setup guide
     url: https://github.com/myenimireddy/JobFitly/blob/main/docs/setup.md
     about: First-time install and everyday start steps for testers
+  - name: Video tutorials
+    url: https://github.com/myenimireddy/JobFitly#video-tutorials-beta
+    about: Groq → profile → Analyze → HITL Fill Form walkthroughs
+  - name: Beta scope (known gaps)
+    url: https://github.com/myenimireddy/JobFitly/blob/main/docs/beta.md
+    about: What JobFitly does and deliberately does not do in beta
+  - name: v0.1.0-beta release
+    url: https://github.com/myenimireddy/JobFitly/releases/tag/v0.1.0-beta
+    about: Tagged beta snapshot to try

@@ -63,12 +63,30 @@ body:
     validations:
       required: true
 
+  - type: dropdown
+    id: portal
+    attributes:
+      label: ATS / portal (if Fill Form)
+      options:
+        - Not applicable
+        - Greenhouse
+        - Lever
+        - Workday
+        - Ashby
+        - Other / generic HTML
+
   - type: input
     id: job_url
     attributes:
       label: Job / application URL (if relevant)
       description: Public posting or ATS URL. Redact query tokens if they look secret.
       placeholder: "https://boards.greenhouse.io/..."
+
+  - type: input
+    id: field_label
+    attributes:
+      label: Field label on the form (if missfill)
+      placeholder: "e.g. Work authorization, Phone country"
 
   - type: textarea
     id: steps
