@@ -31,6 +31,8 @@ Prefer **skipping Ollama** in the prompt if you will paste a Groq key.
    (`bootstrap.sh` generates them; if missing: `npm run generate:fake-resumes`)  
    Backend log should say `[llmParser] Using groq` (not ollama).
 
+**Video walkthroughs** (Groq → profile → Analyze → HITL Fill Form): **[tutorials/](tutorials/)**.
+
 Known gaps: **[beta.md](beta.md)**. Full design/dev/test/release flow: **[process.md](process.md)**.
 
 ---

@@ -10,6 +10,7 @@
 | [portal-field-coverage.md](portal-field-coverage.md) | Portal × control-type green/red sheet |
 | [llm-and-privacy.md](llm-and-privacy.md) | Ollama vs Groq, sanitizer rules |
 | [samples/resumes/](samples/resumes/) | 10 fictional demo résumés (PDF + JSON) |
+| [tutorials/](tutorials/) | Video walkthroughs — Groq, profile, Analyze, HITL Fill Form |
 
 Also see:
 
