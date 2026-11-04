@@ -1,9 +1,11 @@
 const Groq = require('groq-sdk');
 const BaseLLM = require('./base');
 const config = require('../config');
+const { resolveLiveGroqModel } = require('../lib/groqModels');
 
 /**
- * Groq LLM provider for hosted model inference
+ * Groq LLM provider. Model id is resolved from the live Groq catalog
+ * (backend/config/groq-models.json is only the preference order).
  */
 class GroqLLM extends BaseLLM {
   /**
@@ -12,7 +14,7 @@ class GroqLLM extends BaseLLM {
   constructor(opts = {}) {
     super();
     this.apiKey = opts.apiKey || config.groqApiKey;
-    this.model = opts.model || config.groqModel || 'openai/gpt-oss-20b';
+    this.preferredModel = opts.model || config.groqModel || '';
     this.client = this.apiKey ? new Groq({ apiKey: this.apiKey }) : null;
   }
 
@@ -25,9 +27,11 @@ class GroqLLM extends BaseLLM {
       throw new Error('Groq API key not configured. Add it in the Side Panel Settings or backend/.env');
     }
 
+    const model = await resolveLiveGroqModel(this.apiKey, this.preferredModel);
+
     try {
       const response = await this.client.chat.completions.create({
-        model: this.model,
+        model,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
