@@ -20,6 +20,8 @@ npm run test:e2e:ui      # Side Panel UI matrix on local mocks (default)
 LIVE_ATS=1 npm run test:e2e:ui   # opt-in live ATS (avoid unless needed)
 ```
 
+`npm test` also verifies the fill-mode policy: Required only removes confirmed optional fields, keeps unknown requirement state for review, and All fields preserves every field.
+
 **Coverage note:** offline + live e2e exercise **PortalEngine scrape/inject**. Side Panel HITL UX (Ask AI, Start over, tab switch) is guarded by `scripts/check-stack.js` + backend planner Jest tests, not full UI e2e.
 
 ## Mock pages

@@ -16,7 +16,7 @@ Your profile stays on your machine. Optional Groq speeds AI; contact PII is sani
 
 1. **Upload a resume** in the Chrome Side Panel  
 2. **Analyze** the open job posting → score, gaps, blockers  
-3. **Fill Form** one field at a time (review AI drafts; never auto-Submit)  
+3. **Fill Form** in **Required only** (default) or **All fields** mode; review AI drafts and never auto-Submit
 4. **Settings** → paste a Groq key for speed, or stay on local Ollama  
 
 Works with Greenhouse, Lever, Workday, Ashby, plus a generic HTML fallback — details in [docs/portals.md](docs/portals.md).

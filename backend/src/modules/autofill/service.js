@@ -71,11 +71,18 @@ async function loadProfile(profileId) {
 }
 
 class AutofillService {
-  async generateAnswers(profileId, fields, pageContext) {
+  async generateAnswers(profileId, fields, pageContext, fillMode = 'required-only') {
     const { parsed } = await loadProfile(profileId);
     const extraAnswers = parsed.extraAnswers || {};
 
-    const planned = fields.map((f) => ({ field: f, plan: planField(f, parsed, extraAnswers) }))
+    // Required-only skips only confirmed optional fields. Unknown requirement
+    // stays in the queue for human review rather than being silently dropped.
+    const eligibleFields = fillMode === 'required-only'
+      ? fields.filter((field) => field.requiredStatus !== 'optional')
+      : fields;
+    const optionalSkipped = fields.length - eligibleFields.length;
+
+    const planned = eligibleFields.map((f) => ({ field: f, plan: planField(f, parsed, extraAnswers) }))
       .filter((x) => !x.plan.skip);
 
     const ready = planned.filter((x) => !x.plan.needsLLM);
@@ -115,6 +122,13 @@ class AutofillService {
       answers,
       missingFields,
       privacyMode: cloud ? 'cloud' : 'local',
+      fillMode,
+      requirementStats: {
+        detected: fields.length,
+        processed: eligibleFields.length,
+        optionalSkipped,
+        unknownReviewed: eligibleFields.filter((field) => field.requiredStatus === 'unknown').length,
+      },
     };
   }
 

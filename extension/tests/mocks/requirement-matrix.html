@@ -1,0 +1,53 @@
+<!doctype html>
+<html><body>
+  <main>
+    <label for="native-required">Native required</label>
+    <input id="native-required" required>
+
+    <label for="aria-required">ARIA required</label>
+    <input id="aria-required" aria-required="true">
+
+    <div class="question">
+      <label for="visual-required">Visual required *</label>
+      <input id="visual-required">
+    </div>
+
+    <label for="explicit-optional">Portfolio (optional)</label>
+    <input id="explicit-optional">
+
+    <label for="aria-optional">Middle name</label>
+    <input id="aria-optional" aria-required="false">
+
+    <!-- The fixture contract says this employer field is mandatory, but its
+         rendered DOM gives JobFitly no recognizable evidence. It must be unknown. -->
+    <label for="unmarked-required">Security clearance response</label>
+    <input id="unmarked-required" data-fixture-actually-required="true">
+
+    <fieldset aria-required="true">
+      <legend>Work authorization</legend>
+      <label><input type="radio" name="auth" value="yes"> Yes</label>
+      <label><input type="radio" name="auth" value="no"> No</label>
+    </fieldset>
+
+    <label for="already-filled">Email *</label>
+    <input id="already-filled" required value="candidate@example.test">
+
+    <label for="eeo-optional">Veteran status (optional)</label>
+    <select id="eeo-optional"><option value="">Choose</option><option>No</option></select>
+
+    <label for="conditional-trigger">Need sponsorship? *</label>
+    <select id="conditional-trigger" required>
+      <option value="">Choose</option><option value="yes">Yes</option><option value="no">No</option>
+    </select>
+    <label for="conditional-detail">Sponsorship details *</label>
+    <input id="conditional-detail" required style="display:none">
+
+    <label for="resume-required">Resume *</label>
+    <input id="resume-required" type="file" required>
+  </main>
+  <script>
+    document.querySelector('#conditional-trigger').addEventListener('change', (event) => {
+      if (event.target.value === 'yes') document.querySelector('#conditional-detail').style.display = '';
+    });
+  </script>
+</body></html>

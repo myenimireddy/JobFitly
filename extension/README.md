@@ -24,6 +24,8 @@ API origin defaults to `http://localhost:3000` (`src/lib/apiConfig.js`). Testers
 ```
 Page DOM
   → PortalEngine.scrape()
+  → classify requirement: required | optional | unknown
+  → Required only (default) or All fields
   → POST /api/autofill/...
   → planField buckets: known | ask | missing
   → AutofillSection (Fill / Ask AI / Skip / Start over)
@@ -33,6 +35,16 @@ Page DOM
 - `known` — inject after short pacing (profile / saved)
 - `ask` — **always** show draft for human review before inject
 - `missing` — human types; optional Ask AI still lands in the textarea
+
+### Fill modes and required fields
+
+- **Required only** skips fields confirmed optional before they reach the backend or LLM.
+- **All fields** preserves the full-form behavior.
+- A field with unclear ATS metadata stays `unknown` and is reviewed; it is never silently treated as optional.
+- Absence of a required marker is not optional evidence. `optional` requires an explicit optional label, `aria-required="false"`, or equivalent portal metadata.
+- Detection uses native `required`, `aria-required`, visible required markers, and portal wrappers.
+- Required consent, file upload, CAPTCHA, authentication, signature, and Submit remain manual.
+- The last mode is stored only in `chrome.storage.local`, never in the job site's page storage.
 
 ## Settings (Groq vs Ollama)
 

@@ -1,4 +1,4 @@
-.PHONY: install install-backend install-frontend install-extension install-hooks setup run run-backend run-frontend dev dev-backend dev-frontend dev-extension ollama test test-fast test-backend test-extension test-extension-offline test-e2e check-stack build-extension clean clean-backend clean-frontend clean-extension clean-all db-push db-reset help
+.PHONY: install install-backend install-frontend install-extension install-hooks setup run run-backend run-frontend dev dev-backend dev-frontend dev-extension ollama test test-fast test-backend test-features test-feature-profile test-feature-configuration test-feature-analysis test-feature-hitl test-extension test-extension-offline test-e2e check-stack build-extension clean clean-backend clean-frontend clean-extension clean-all db-push db-reset help
 
 install: install-backend install-frontend install-extension install-hooks
 	@echo "All dependencies installed!"
@@ -84,6 +84,21 @@ check-stack:
 test-backend:
 	cd backend && npm test
 
+test-features:
+	cd backend && npm run test:features
+
+test-feature-profile:
+	cd backend && npm run test:feature:profile
+
+test-feature-configuration:
+	cd backend && npm run test:feature:configuration
+
+test-feature-analysis:
+	cd backend && npm run test:feature:analysis
+
+test-feature-hitl:
+	cd backend && npm run test:feature:hitl
+
 # Offline only — safe for pre-commit (no live ATS / network).
 test-extension:
 	cd extension && npm test
@@ -133,6 +148,8 @@ help:
 	@echo ""
 	@echo "Tests:"
 	@echo "  make test / test-fast   Stack checks + backend Jest + offline portal mocks"
+	@echo "  make test-features      Profile + configuration + analysis + HITL suites"
+	@echo "  make test-feature-profile | configuration | analysis | hitl"
 	@echo "  make test-extension-offline  Playwright fixtures (needs browsers)"
 	@echo "  make test-e2e           Live ATS e2e (network; not in pre-commit)"
 	@echo "  make install-hooks      Enable git pre-commit → make test-fast"
