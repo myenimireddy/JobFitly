@@ -533,10 +533,35 @@ export async function runFillFormWithHitl(panel, jobPage, { maxSteps = 120, pers
         const options = await select.locator('option').allTextContents();
         const pick = options.find((o) => o && !/^choose/i.test(o) && !/^select/i.test(o));
         if (pick) {
+          // Native <select> onChange must resolve HITL (no Fill button on choice prompts).
+          // CI Chromium sometimes sets value without React seeing change — force events, then wait.
           await select.selectOption({ label: pick }).catch(async () => {
             await select.selectOption({ index: 1 }).catch(() => {});
           });
-          await panel.waitForTimeout(350);
+          // React often ignores a value write without the native setter + events (CI flake).
+          await select.evaluate((el, label) => {
+            const opt =
+              [...el.options].find((o) => (o.textContent || '').trim() === label) ||
+              [...el.options].find((o) => o.value) ||
+              el.options[1];
+            if (!opt) return;
+            const desc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+            if (desc?.set) desc.set.call(el, opt.value);
+            else el.value = opt.value;
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+          }, pick).catch(() => {});
+          const advanced = await prompt
+            .waitFor({ state: 'hidden', timeout: 12_000 })
+            .then(() => true)
+            .catch(() => false);
+          if (!advanced) {
+            const skip = prompt.locator('[data-testid="field-prompt-skip"]').or(prompt.getByRole('button', { name: /^Skip$/i }));
+            if (await skip.isVisible({ timeout: 300 }).catch(() => false)) {
+              await skip.click();
+              await panel.waitForTimeout(300);
+            }
+          }
           continue;
         }
       }
@@ -598,7 +623,11 @@ export async function runFillFormWithHitl(panel, jobPage, { maxSteps = 120, pers
   }
 
   const done = panel.locator('[data-testid="autofill-done"]');
-  await done.waitFor({ state: 'visible', timeout: 120_000 });
+  if (!(await done.isVisible({ timeout: 2_000 }).catch(() => false))) {
+    throw new Error(
+      `HITL did not finish within ${maxSteps} steps (autofill-done missing). Portal may be stuck on a select/prompt.`,
+    );
+  }
 
   // Fast portals (e.g. Ashby) can finish between polls — grab a final stamp / filled-value proxy.
   const finalStamp = await jobPage.evaluate(() => ({
