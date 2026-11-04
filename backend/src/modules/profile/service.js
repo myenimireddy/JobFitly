@@ -1,6 +1,7 @@
 const pdfParse = require('pdf-parse');
 const { prisma } = require('../../lib/prisma');
 const { parseResumeWithLLM, normalizeParsedResume, computeConfidence, isCompleteParse } = require('../../lib/llmResumeParser');
+const { restoreScrubbedContacts } = require('../../lib/piiSanitizer');
 const {
   draftApplicationProfile,
   getCaptureQuestionnaire,
@@ -46,12 +47,11 @@ function findReusableProfile(rawText, rows) {
 }
 
 function serializeProfile(profile) {
-  return {
-    ...profile,
-    parsedData: typeof profile.parsedData === 'string'
-      ? JSON.parse(profile.parsedData)
-      : profile.parsedData,
-  };
+  const parsedData = typeof profile.parsedData === 'string'
+    ? JSON.parse(profile.parsedData)
+    : profile.parsedData;
+  if (parsedData) restoreScrubbedContacts(parsedData, profile.rawText);
+  return { ...profile, parsedData };
 }
 
 /**

@@ -139,6 +139,13 @@ async function run() {
     check(doc.querySelector('#fullName')?.value === 'Ada Lovelace', 'workday: name');
     check(doc.querySelector('#phone')?.value === '0000002222', 'workday: phone');
     check(doc.querySelector('#linkedin')?.value.includes('linkedin.com'), 'workday: linkedin');
+    const line1 = fields.find((f) => /address line 1/i.test(f.label));
+    check(line1 && line1.type !== 'select' && !line1.options, 'workday: Address Line 1 stays a text field');
+    const lineFilled = filledCount(await PortalEngine.inject([
+      { label: 'Address Line 1', answer: '123 Main Street' },
+    ]));
+    check(lineFilled >= 1, 'workday: Address Line 1 inject counted');
+    check(doc.querySelector('#address-line-1')?.value === '123 Main Street', 'workday: saved street typed into Address Line 1');
   }
 
   // ── Ashby ──

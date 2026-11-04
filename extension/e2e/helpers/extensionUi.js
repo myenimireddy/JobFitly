@@ -310,8 +310,6 @@ export async function completeApplicationCapture(panel, persona = null) {
   await fillIfEmpty(/Postal/i, '10001');
   await fillIfEmpty(/Location \(City/i, p.location);
   await fillIfEmpty(/LinkedIn/i, p.linkedin);
-  await fillIfEmpty(/hear about/i, 'LinkedIn');
-
   const phoneCountry = panel.getByPlaceholder('Country (United States)');
   if (await phoneCountry.isVisible({ timeout: 500 }).catch(() => false)) {
     if (!(await phoneCountry.inputValue()).trim()) await phoneCountry.fill('United States');

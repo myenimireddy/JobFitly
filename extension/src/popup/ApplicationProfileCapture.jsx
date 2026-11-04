@@ -5,7 +5,6 @@ const GROUPS = [
   { id: 'identity', title: 'Identity' },
   { id: 'contact', title: 'Contact & location' },
   { id: 'eligibility', title: 'Work eligibility' },
-  { id: 'preferences', title: 'Preferences' },
   { id: 'eeo', title: 'Demographic (optional)', collapsedByDefault: true },
 ];
 
@@ -131,7 +130,7 @@ export function ApplicationProfileCapture({ profileId, onSaved, onSkip, compact 
 
       {missing.length > 0 && (
         <p className="text-[10px] text-amber-300/90 mb-2">
-          Still needed: {missing.join(', ')}
+          Still needed: {missing.map((key) => catalog.find((field) => field.key === key)?.label || key).join(', ')}
         </p>
       )}
 

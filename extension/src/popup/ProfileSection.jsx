@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 /**
  * Profile upload / summary for the side panel.
  * Clear = local UI only. Delete = permanent backend + local clear (confirm first).
- * Multi-profile: explicit switcher; /latest only via "Load latest on this machine".
+ * One profile for this user. Empty panel can load the newest resume on this machine.
  */
 export function ProfileSection({
   profile,
@@ -12,14 +12,12 @@ export function ProfileSection({
   onUpload,
   onClear,
   onDelete,
-  onSelectProfile,
   onLoadLatest,
   compact = false,
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const skillCount = profile?.parsedData?.skills?.length ?? profile?.skills?.length ?? 0;
   const name = profile?.parsedData?.personalInfo?.fullName || profile?.name || 'Candidate';
-  const showSwitcher = profileSummaries.length > 1;
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -155,25 +153,6 @@ export function ProfileSection({
             </div>
             {deleteControls}
           </div>
-
-          {showSwitcher && onSelectProfile ? (
-            <label className="block mt-2">
-              <span className="text-[10px] text-slate-500">Switch profile</span>
-              <select
-                data-testid="profile-switcher"
-                className="mt-0.5 w-full rounded-md bg-slate-900 border border-slate-600 px-2 py-1.5 text-xs text-slate-100"
-                value={profile.id}
-                disabled={loading}
-                onChange={(e) => onSelectProfile(e.target.value)}
-              >
-                {profileSummaries.map((row) => (
-                  <option key={row.id} value={row.id}>
-                    {row.name}{row.captureComplete ? '' : ' (incomplete)'}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
 
           {confirmDelete && (
             <p className="text-[10px] text-red-300/90 mt-2 leading-relaxed">

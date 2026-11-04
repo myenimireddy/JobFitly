@@ -13,6 +13,7 @@ import { ApplicationProfileCapture } from '../popup/ApplicationProfileCapture';
 import { MatchSection } from '../popup/MatchSection';
 import { AutofillSection } from '../popup/AutofillSection';
 import { SettingsPanel } from '../popup/SettingsPanel';
+import { nextShowCapture } from '../lib/captureSession';
 
 function sendMessageSafe(tabId, message) {
   return new Promise((resolve) => {
@@ -45,6 +46,7 @@ export function Panel() {
   const [fillActive, setFillActive] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showCapture, setShowCapture] = useState(false);
+  const [staleNote, setStaleNote] = useState(null);
   /** Last http(s) tab in this window — Fill Form target when Side Panel is not native. */
   const [jobTabId, setJobTabId] = useState(null);
   const {
@@ -133,16 +135,21 @@ export function Panel() {
 
   const applyProfile = useCallback(async (data) => {
     if (!data?.id) return;
+    setStaleNote(null);
     setProfile(data);
     await setProfileId(data.id);
     await syncProfileIdToPage(data.id);
-    setShowCapture(!data?.parsedData?.applicationProfile?.captureComplete);
+    setShowCapture(nextShowCapture('profile-loaded', {
+      captureComplete: !!data?.parsedData?.applicationProfile?.captureComplete,
+    }));
     await refreshSummaries();
   }, [syncProfileIdToPage, refreshSummaries]);
 
   useEffect(() => {
+    let cancelled = false;
     const init = async () => {
       const online = await checkBackend();
+      if (cancelled) return;
       setBackendOnline(online);
       await refreshActiveTab();
       if (online) {
@@ -157,26 +164,25 @@ export function Panel() {
         if (savedProfileId) await setProfileId(savedProfileId);
       }
 
-      // Only load an explicit id — never silently swap to /latest.
-      if (!savedProfileId) return;
+      // Load once per panel session. Tab changes must not reopen Application details.
+      if (!savedProfileId || cancelled) return;
       try {
         const data = await fetchProfile(savedProfileId);
-        await applyProfile(data);
+        if (!cancelled) await applyProfile(data);
       } catch (err) {
+        if (cancelled) return;
         console.warn('[JobFitly] Saved profile missing; clear and upload or load latest.', err);
         await clearProfileId();
+        await syncProfileIdToPage(null);
         setProfile(null);
+        setStaleNote('Saved profile is no longer on this backend. Upload a resume or use Load latest.');
       }
     };
     init();
-  }, [
-    checkBackend,
-    getPageProfileId,
-    refreshActiveTab,
-    fetchProfile,
-    applyProfile,
-    refreshSummaries,
-  ]);
+    return () => { cancelled = true; };
+    // Panel session load only. refreshActiveTab changes on every job tab and must not re-run this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const onActivated = () => { refreshActiveTab(); };
@@ -197,7 +203,7 @@ export function Panel() {
     try {
       const data = await uploadResume(file);
       await applyProfile(data);
-      setShowCapture(true);
+      setShowCapture(nextShowCapture('resume-uploaded'));
     } finally {
       setLoadingText('');
     }
@@ -205,7 +211,7 @@ export function Panel() {
 
   const handleClear = useCallback(async () => {
     setProfile(null);
-    setShowCapture(false);
+    setShowCapture(nextShowCapture('cleared'));
     await clearProfileId();
     await syncProfileIdToPage(null);
     clearError();
@@ -223,25 +229,11 @@ export function Panel() {
       }
     }
     setProfile(null);
-    setShowCapture(false);
+    setShowCapture(nextShowCapture('cleared'));
     await clearProfileId();
     await syncProfileIdToPage(null);
     await refreshSummaries();
   }, [profile?.id, deleteProfile, clearError, syncProfileIdToPage, refreshSummaries]);
-
-  const handleSelectProfile = useCallback(async (id) => {
-    if (!id || id === profile?.id) return;
-    clearError();
-    setLoadingText('Loading profile…');
-    try {
-      const data = await fetchProfile(id);
-      await applyProfile(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingText('');
-    }
-  }, [profile?.id, fetchProfile, applyProfile, clearError]);
 
   const handleLoadLatest = useCallback(async () => {
     clearError();
@@ -256,7 +248,9 @@ export function Panel() {
     }
   }, [fetchLatestProfile, applyProfile, clearError]);
 
-  const displayError = error || (!backendOnline ? 'Backend offline — run ./scripts/start.sh' : null);
+  const displayError = error
+    || staleNote
+    || (!backendOnline ? 'Backend offline — run ./scripts/start.sh' : null);
 
   return (
     <div className="h-screen w-full min-w-[280px] bg-slate-900 text-slate-100 flex flex-col">
@@ -303,7 +297,6 @@ export function Panel() {
             onUpload={handleUpload}
             onClear={handleClear}
             onDelete={handleDelete}
-            onSelectProfile={handleSelectProfile}
             onLoadLatest={handleLoadLatest}
             compact={fillActive}
           />
@@ -319,13 +312,11 @@ export function Panel() {
           <ApplicationProfileCapture
             profileId={profile.id}
             onSaved={(updated) => {
-              setProfile(updated);
-              if (updated?.parsedData?.applicationProfile?.captureComplete) {
-                setShowCapture(false);
-              }
+              if (updated) setProfile(updated);
+              setShowCapture(nextShowCapture('saved'));
               refreshSummaries();
             }}
-            onSkip={() => setShowCapture(false)}
+            onSkip={() => setShowCapture(nextShowCapture('later'))}
           />
         )}
 
@@ -344,7 +335,7 @@ export function Panel() {
             </p>
             <button
               type="button"
-              onClick={() => setShowCapture(true)}
+              onClick={() => setShowCapture(nextShowCapture('edit'))}
               className="text-[10px] text-indigo-300 hover:text-indigo-200 underline shrink-0 ml-2"
             >
               {captureComplete ? 'Edit details' : 'Complete details'}
@@ -354,7 +345,12 @@ export function Panel() {
 
         {profile && (
           <>
-            <MatchSection profile={profile} disabled={fillActive} />
+            <MatchSection
+              profile={profile}
+              disabled={fillActive}
+              jobUrl={tabInfo.url}
+              activeTabId={jobTabId || tabInfo.id}
+            />
             <div className="border-t border-slate-800 mx-3" />
             <AutofillSection
               profile={profile}
@@ -389,7 +385,7 @@ export function Panel() {
           // New API origin → old profileId may 404; clear panel like Clear.
           if (payload?.apiOrigin) {
             setProfile(null);
-            setShowCapture(false);
+            setShowCapture(nextShowCapture('cleared'));
             await clearProfileId();
             await syncProfileIdToPage(null);
           }

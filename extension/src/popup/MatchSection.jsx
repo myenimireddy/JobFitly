@@ -2,13 +2,20 @@
  * Extract job text from the active tab and score fit via /api/job + /api/match.
  * Speed depends on effective LLM (Groq key in Settings → fast; else Ollama).
  */
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   ensureContentScript,
   getActiveTabId,
   sendMessageSafe,
 } from '../lib/contentBridge';
 import { getApiBase } from '../lib/apiConfig';
+import {
+  hostOf,
+  emptyJobFitView,
+  navigateJobFit,
+  storeJobFitResult,
+  clearJobFitUrl,
+} from '../lib/jobFitSession';
 
 function scoreTone(score) {
   if (score >= 75) return 'text-green-400 border-green-700/50 bg-green-950/30';
@@ -65,11 +72,12 @@ function normalizePartials(list) {
 /**
  * Separate from Fill Form: scrape the open job tab → score vs profile → apply/skip cue.
  */
-export function MatchSection({ profile, disabled = false }) {
+export function MatchSection({ profile, disabled = false, jobUrl = '', activeTabId = null }) {
   const [status, setStatus] = useState('idle'); // idle | working | done | error
   const [errorMsg, setErrorMsg] = useState(null);
   const [jobTitle, setJobTitle] = useState('');
   const [company, setCompany] = useState('');
+  const [pageUrl, setPageUrl] = useState('');
   const [score, setScore] = useState(null);
   const [matched, setMatched] = useState([]);
   const [missing, setMissing] = useState([]);
@@ -79,6 +87,44 @@ export function MatchSection({ profile, disabled = false }) {
   /** Bumped on Cancel so in-flight analyze ignores late results. */
   const runIdRef = useRef(0);
   const abortRef = useRef(null);
+  const cacheRef = useRef(new Map());
+  const jobKeyRef = useRef('');
+  const profileIdRef = useRef(profile?.id);
+
+  const paint = useCallback((view) => {
+    const next = view || emptyJobFitView();
+    setStatus(next.status || 'idle');
+    setErrorMsg(next.errorMsg || null);
+    setJobTitle(next.jobTitle || '');
+    setCompany(next.company || '');
+    setPageUrl(next.pageUrl || '');
+    setScore(next.score ?? null);
+    setMatched(next.matched || []);
+    setMissing(next.missing || []);
+    setPartial(next.partial || []);
+    setBlockers(next.blockers || []);
+    setReasoning(next.reasoning || '');
+  }, []);
+
+  useEffect(() => {
+    const nav = navigateJobFit({
+      cache: cacheRef.current,
+      jobUrl,
+      previousKey: jobKeyRef.current,
+      profileId: profile?.id,
+      previousProfileId: profileIdRef.current,
+    });
+    if (!nav.changed) return;
+    profileIdRef.current = profile?.id;
+    cacheRef.current = nav.cache;
+    jobKeyRef.current = nav.key;
+    runIdRef.current += 1;
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+    paint(nav.view);
+  }, [jobUrl, profile?.id, paint]);
 
   const reset = useCallback(() => {
     runIdRef.current += 1;
@@ -86,17 +132,10 @@ export function MatchSection({ profile, disabled = false }) {
       abortRef.current.abort();
       abortRef.current = null;
     }
-    setStatus('idle');
-    setErrorMsg(null);
-    setJobTitle('');
-    setCompany('');
-    setScore(null);
-    setMatched([]);
-    setMissing([]);
-    setPartial([]);
-    setBlockers([]);
-    setReasoning('');
-  }, []);
+    const cleared = clearJobFitUrl({ cache: cacheRef.current, activeKey: jobKeyRef.current });
+    cacheRef.current = cleared.cache;
+    paint(cleared.view);
+  }, [paint]);
 
   const analyze = useCallback(async () => {
     if (!profile?.id || disabled) return;
@@ -112,7 +151,7 @@ export function MatchSection({ profile, disabled = false }) {
     const stillActive = () => runId === runIdRef.current && !controller.signal.aborted;
 
     try {
-      const tabId = await getActiveTabId();
+      const tabId = activeTabId || await getActiveTabId();
       if (!stillActive()) return;
       if (!tabId) throw new Error('No active tab — open a job posting first');
 
@@ -142,8 +181,7 @@ export function MatchSection({ profile, disabled = false }) {
 
       const job = extractBody.data;
       const parsed = typeof job.parsedData === 'string' ? JSON.parse(job.parsedData) : (job.parsedData || {});
-      setJobTitle(parsed.title || page.title || 'This job');
-      setCompany(parsed.company || '');
+      const scoredUrl = page.url || jobUrl;
 
       const matchRes = await fetch(`${API_BASE}/match`, {
         method: 'POST',
@@ -163,8 +201,6 @@ export function MatchSection({ profile, disabled = false }) {
         : (match.resultData || {});
       const matchScore = match.matchScore ?? result.matchScore ?? 0;
 
-      if (!stillActive()) return;
-      setScore(Number(matchScore) || 0);
       const matchedSkills = normalizeSkills(
         result.matchingSkills || result.matchedSkills,
       ).slice(0, 10);
@@ -188,18 +224,36 @@ export function MatchSection({ profile, disabled = false }) {
         const fromJob = required.filter((s) => !matchedSet.has(s.toLowerCase()));
         gapSkills = normalizeSkills([...fromRecs, ...fromJob]).slice(0, 10);
       }
-      setMatched(matchedSkills);
-      setMissing(gapSkills);
-      setPartial(normalizePartials(result.partialSkills || result.partialMatches).slice(0, 6));
-      setBlockers((result.blockers || []).slice(0, 5));
-      setReasoning(String(result.scoreReasoning || '').slice(0, 280));
-      setStatus('done');
+      const view = {
+        status: 'done',
+        errorMsg: null,
+        jobTitle: parsed.title || page.title || 'This job',
+        company: parsed.company || '',
+        pageUrl: scoredUrl,
+        score: Number(matchScore) || 0,
+        matched: matchedSkills,
+        missing: gapSkills,
+        partial: normalizePartials(result.partialSkills || result.partialMatches).slice(0, 6),
+        blockers: (result.blockers || []).slice(0, 5),
+        reasoning: String(result.scoreReasoning || '').slice(0, 280),
+      };
+      const stored = storeJobFitResult({
+        cache: cacheRef.current,
+        activeKey: jobKeyRef.current,
+        scoredUrl,
+        view,
+      });
+      cacheRef.current = stored.cache;
+      if (!stillActive() || !stored.show) return;
+      paint(stored.view);
     } catch (err) {
       if (!stillActive() || err?.name === 'AbortError') return;
-      setErrorMsg(err.message || 'Analyze failed');
-      setStatus('error');
+      const view = { ...emptyJobFitView(), status: 'error', errorMsg: err.message || 'Analyze failed', pageUrl: jobUrl };
+      const key = jobKeyRef.current;
+      if (key) cacheRef.current.set(key, view);
+      paint(view);
     }
-  }, [profile, disabled]);
+  }, [profile, disabled, activeTabId, jobUrl, paint]);
 
   if (!profile) return null;
 
@@ -219,7 +273,7 @@ export function MatchSection({ profile, disabled = false }) {
             Analyze this job
           </button>
           <p className="mt-1.5 text-[11px] text-slate-500 leading-snug">
-            Scores the open tab against your resume — decide apply vs skip before Fill Form.
+            Scores {hostOf(jobUrl) || 'this tab'} against your resume. Each job URL keeps its own result.
           </p>
           {errorMsg && <p className="text-xs text-red-400 mt-2">{errorMsg}</p>}
         </>
@@ -241,6 +295,9 @@ export function MatchSection({ profile, disabled = false }) {
             <div className="min-w-0">
               <p className="text-sm font-semibold truncate" title={jobTitle}>{jobTitle}</p>
               {company ? <p className="text-[11px] opacity-80 truncate">{company}</p> : null}
+              {hostOf(pageUrl) ? (
+                <p className="text-[10px] opacity-70 truncate" title={pageUrl}>{hostOf(pageUrl)}</p>
+              ) : null}
             </div>
             <div className="text-2xl font-bold tabular-nums shrink-0">{Math.round(score)}</div>
           </div>

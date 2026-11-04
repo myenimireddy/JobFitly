@@ -1,6 +1,7 @@
 'use strict';
 
 const {
+  APPLICATION_FIELD_CATALOG,
   normalizePhone,
   draftApplicationProfile,
   mergeApplicationProfile,
@@ -31,6 +32,18 @@ describe('normalizePhone', () => {
 });
 
 describe('application capture', () => {
+  test('does not ask how-you-heard as a saved preference', () => {
+    const groups = new Set(APPLICATION_FIELD_CATALOG.map((field) => field.group));
+    expect(groups.has('preferences')).toBe(false);
+    expect(APPLICATION_FIELD_CATALOG.some((field) => field.key === 'hearAbout')).toBe(false);
+    const required = APPLICATION_FIELD_CATALOG.filter((field) => !field.optional).map((field) => field.key);
+    expect(required).toEqual(expect.arrayContaining([
+      'phone', 'workAuthUS', 'sponsorshipRequired', 'age18Plus',
+    ]));
+    expect(required).not.toContain('hearAbout');
+    expect(required).not.toContain('availableFrom');
+  });
+
   test('draft prefills from resume personalInfo', () => {
     const draft = draftApplicationProfile({
       personalInfo: {
@@ -68,6 +81,10 @@ describe('application capture', () => {
     expect(merged.applicationProfile.captureComplete).toBe(true);
     expect(merged.sponsorshipRequired).toBe(false);
     expect(merged.personalInfo.phone).toBe('5551234567');
+    expect(missingApplicationFields({
+      ...merged.applicationProfile,
+      hearAbout: '',
+    })).toEqual([]);
     expect(merged.applicationProfile.phone).toEqual({
       country: 'United States',
       countryCode: '+1',

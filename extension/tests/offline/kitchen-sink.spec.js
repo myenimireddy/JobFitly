@@ -95,6 +95,7 @@ const PORTALS = [
       { label: 'Email', answer: 'ada@example.com' },
       { label: 'Full Name', answer: 'Ada Lovelace' },
       { label: 'Country', answer: 'United States' },
+      { label: 'Address Line 1', answer: '123 Main Street' },
       { label: 'State/Province', answer: 'Texas' },
       { label: 'Additional Information', answer: 'Workday notes.' },
       { label: 'How did you hear about us?', answer: 'LinkedIn' },
@@ -103,6 +104,7 @@ const PORTALS = [
     assert: async (page) => {
       await expect(page.locator('#emailAddress--emailAddress')).toHaveValue('ada@example.com');
       await expect(page.locator('#country-listbox-btn')).toHaveText(/United States/i);
+      await expect(page.locator('#address-line-1')).toHaveValue('123 Main Street');
       await expect(page.locator('#state-listbox-btn')).toHaveText(/Texas/i);
       await expect(page.locator('#additionalInfo')).toHaveValue(/Workday notes/);
     },

@@ -1,7 +1,7 @@
 /**
  * Side Panel Settings overlay.
  * - Backend API origin (default localhost:3000)
- * - Groq API key via /api/settings/llm; "Use Ollama" sets forceOllama.
+ * - Groq / Ollama switch via /api/settings/llm. Switching to Ollama keeps the saved key.
  * Full Groq key never returned by API.
  */
 import React, { useEffect, useState, useCallback } from 'react';
@@ -24,6 +24,7 @@ export function SettingsPanel({ open, onClose, onSaved }) {
   const [showKey, setShowKey] = useState(false);
   const [originInput, setOriginInput] = useState(DEFAULT_API_ORIGIN);
   const [originStatus, setOriginStatus] = useState(null);
+  const [replaceKey, setReplaceKey] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -83,6 +84,7 @@ export function SettingsPanel({ open, onClose, onSaved }) {
       if (!res.ok || !body.success) throw new Error(body.error || 'Save failed');
       setInfo(body.data);
       setKeyInput('');
+      setReplaceKey(false);
       if (typeof onSaved === 'function') onSaved(body.data);
     } catch (err) {
       setError(err.message || 'Save failed');
@@ -91,22 +93,27 @@ export function SettingsPanel({ open, onClose, onSaved }) {
     }
   };
 
-  const clearKey = async () => {
+  const switchProvider = async (forceOllama) => {
+    if (!forceOllama && !info?.hasGroqKey) {
+      setReplaceKey(true);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
       const res = await fetch(`${await getApiBase()}/settings/llm`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groqApiKey: null }),
+        body: JSON.stringify({ forceOllama }),
       });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok || !body.success) throw new Error(body.error || 'Clear failed');
+      if (!res.ok || !body.success) throw new Error(body.error || 'Switch failed');
       setInfo(body.data);
       setKeyInput('');
+      setReplaceKey(false);
       if (typeof onSaved === 'function') onSaved(body.data);
     } catch (err) {
-      setError(err.message || 'Clear failed');
+      setError(err.message || 'Switch failed');
     } finally {
       setSaving(false);
     }
@@ -197,64 +204,107 @@ export function SettingsPanel({ open, onClose, onSaved }) {
           )}
         </section>
 
-        <section className="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-3 space-y-2">
-          <h3 className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-            Groq API key
-          </h3>
-          <p className="text-[11px] text-slate-500 leading-snug">
-            Free key from{' '}
-            <a
-              href="https://console.groq.com/keys"
-              target="_blank"
-              rel="noreferrer"
-              className="text-indigo-400 hover:text-indigo-300 underline"
-            >
-              console.groq.com/keys
-            </a>
-            . Applies to resume parse, Analyze, and Ask AI. Without it, those use local Ollama (~30–60s).
-          </p>
-          <div className="flex gap-1.5">
-            <input
-              type={showKey ? 'text' : 'password'}
-              value={keyInput}
-              onChange={(e) => setKeyInput(e.target.value)}
-              placeholder="gsk_…"
-              autoComplete="off"
-              spellCheck={false}
-              className="flex-1 min-w-0 rounded-md bg-slate-900 border border-slate-600 px-2 py-1.5 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
-            />
-            <button
-              type="button"
-              onClick={() => setShowKey((v) => !v)}
-              className="text-[10px] text-slate-400 hover:text-slate-200 px-1.5 shrink-0"
-            >
-              {showKey ? 'Hide' : 'Show'}
-            </button>
-          </div>
-          <div className="flex gap-2 pt-1">
-            <button
-              type="button"
-              disabled={saving || !keyInput.trim()}
-              onClick={save}
-              className="flex-1 py-1.5 rounded-md text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-40"
-            >
-              {saving ? 'Saving…' : 'Save key'}
-            </button>
-            <button
-              type="button"
-              disabled={saving || !isGroq}
-              onClick={clearKey}
-              className="py-1.5 px-2.5 rounded-md text-xs text-slate-400 border border-slate-600 hover:bg-slate-700/50 disabled:opacity-40"
-            >
-              Use Ollama
-            </button>
-          </div>
-          <p className="text-[10px] text-slate-600 leading-snug">
-            JobFitly does <span className="text-slate-400">not</span> upload your profile to our servers.
-            Data stays in your local backend. With Groq: contact PII is scrubbed/placeholdered before
-            cloud prompts (including resume parse). Use Ollama keeps Analyze / parse on this machine.
-          </p>
-        </section>
+        {!loading && (
+        <>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            disabled={saving || isGroq}
+            onClick={() => switchProvider(false)}
+            className={`rounded-md px-2 py-2 text-left border ${
+              isGroq
+                ? 'bg-indigo-600 border-indigo-500 text-white'
+                : 'bg-slate-800/60 border-slate-600 text-slate-300 hover:bg-slate-700/50'
+            } disabled:opacity-100`}
+          >
+            <span className="block text-xs font-medium">Groq</span>
+            <span className={`block text-[10px] ${isGroq ? 'text-indigo-100' : 'text-slate-500'}`}>
+              Fast · cloud
+            </span>
+          </button>
+          <button
+            type="button"
+            disabled={saving || !isGroq}
+            onClick={() => switchProvider(true)}
+            className={`rounded-md px-2 py-2 text-left border ${
+              !isGroq
+                ? 'bg-amber-700/80 border-amber-600 text-white'
+                : 'bg-slate-800/60 border-slate-600 text-slate-300 hover:bg-slate-700/50'
+            } disabled:opacity-100`}
+          >
+            <span className="block text-xs font-medium">Ollama</span>
+            <span className={`block text-[10px] ${!isGroq ? 'text-amber-100' : 'text-slate-500'}`}>
+              On this Mac
+            </span>
+          </button>
+        </div>
+
+        {info?.hasGroqKey && !replaceKey ? (
+          <button
+            type="button"
+            onClick={() => setReplaceKey(true)}
+            className="w-full py-1.5 rounded-md text-xs text-slate-400 border border-slate-600 hover:bg-slate-700/50"
+          >
+            Replace Groq key
+          </button>
+        ) : (
+          <section className="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-3 space-y-2">
+            <h3 className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              Groq API key
+            </h3>
+            <p className="text-[11px] text-slate-500 leading-snug">
+              Free key from{' '}
+              <a
+                href="https://console.groq.com/keys"
+                target="_blank"
+                rel="noreferrer"
+                className="text-indigo-400 hover:text-indigo-300 underline"
+              >
+                console.groq.com/keys
+              </a>
+              . Used for resume parse, Analyze, and Ask AI.
+            </p>
+            <div className="flex gap-1.5">
+              <input
+                type={showKey ? 'text' : 'password'}
+                value={keyInput}
+                onChange={(e) => setKeyInput(e.target.value)}
+                placeholder="gsk_…"
+                autoComplete="off"
+                spellCheck={false}
+                className="flex-1 min-w-0 rounded-md bg-slate-900 border border-slate-600 px-2 py-1.5 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
+              />
+              <button
+                type="button"
+                onClick={() => setShowKey((v) => !v)}
+                className="text-[10px] text-slate-400 hover:text-slate-200 px-1.5 shrink-0"
+              >
+                {showKey ? 'Hide' : 'Show'}
+              </button>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                disabled={saving || !keyInput.trim()}
+                onClick={save}
+                className="flex-1 py-1.5 rounded-md text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-40"
+              >
+                {saving ? 'Saving…' : 'Save key'}
+              </button>
+              {info?.hasGroqKey && (
+                <button
+                  type="button"
+                  onClick={() => { setReplaceKey(false); setKeyInput(''); }}
+                  className="py-1.5 px-2.5 rounded-md text-xs text-slate-400 border border-slate-600 hover:bg-slate-700/50"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          </section>
+        )}
+        </>
+        )}
 
         <section className="rounded-lg border border-slate-700/80 bg-slate-900/40 px-3 py-2.5">
           <h3 className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">

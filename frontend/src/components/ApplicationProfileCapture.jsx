@@ -6,7 +6,6 @@ const GROUPS = [
   { id: 'identity', title: 'Identity' },
   { id: 'contact', title: 'Contact & location' },
   { id: 'eligibility', title: 'Work eligibility' },
-  { id: 'preferences', title: 'Preferences' },
   { id: 'eeo', title: 'Demographic (optional)' },
 ];
 

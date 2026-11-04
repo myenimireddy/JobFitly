@@ -154,6 +154,23 @@ describe('resolveFromProfile — no guessing', () => {
     expect(resolveFromProfile('Email', thinProfile)).toBe('ada@example.com');
   });
 
+  test('does not type the cloud email placeholder onto the form', () => {
+    const { restoreScrubbedContacts } = require('../../lib/piiSanitizer');
+    const parsed = restoreScrubbedContacts(
+      { personalInfo: { fullName: 'Ada Lovelace', email: '[CANDIDATE_EMAIL]' } },
+      'Ada Lovelace\nada@example.com\nEngineer',
+    );
+    expect(parsed.personalInfo.email).toBe('ada@example.com');
+    expect(resolveFromProfile('Email', parsed)).toBe('ada@example.com');
+    const poisoned = planField(
+      { label: 'Email' },
+      { personalInfo: { email: 'ada@example.com' } },
+      { email: '[CANDIDATE_EMAIL]' },
+    );
+    expect(poisoned.answer).toBe('ada@example.com');
+    expect(poisoned.answer).not.toContain('CANDIDATE_EMAIL');
+  });
+
   test('strips location from current company and nationalizes US phone', () => {
     const p = {
       ...thinProfile,
@@ -186,6 +203,11 @@ describe('resolveFromProfile — no guessing', () => {
     expect(resolveFromProfile('Phone Number', p)).toBe('5551234567');
     expect(resolveFromProfile('Country Phone Code', p)).toMatch(/United States/);
     expect(resolveFromProfile('How did you hear about this job?', p)).toBe('LinkedIn');
+    const withoutSource = {
+      ...p,
+      applicationProfile: { ...p.applicationProfile, hearAbout: '' },
+    };
+    expect(resolveFromProfile('How did you hear about this job?', withoutSource)).toBeNull();
   });
 
   test('does not guess East Asian when South Asian is also an option', () => {
@@ -215,6 +237,22 @@ describe('planField buckets', () => {
     expect(plan.bucket).toBe('known');
     expect(plan.source).toBe('profile');
     expect(plan.needsLLM).toBeFalsy();
+  });
+
+  test('saved street fills Address Line 1 without asking', () => {
+    const extra = { address1: '123 Main Street' };
+    const plan = planField({ label: 'Address Line 1' }, thinProfile, extra);
+    expect(plan.bucket).toBe('known');
+    expect(plan.source).toBe('stored');
+    expect(plan.answer).toBe('123 Main Street');
+    expect(plan.skip).toBe(false);
+    const fromProfile = planField(
+      { label: 'Address Line 1' },
+      { ...thinProfile, applicationProfile: { address1: '9 Oak Ave' } },
+      {},
+    );
+    expect(fromProfile.bucket).toBe('known');
+    expect(fromProfile.answer).toBe('9 Oak Ave');
   });
 
   test('saved answer is known/stored', () => {

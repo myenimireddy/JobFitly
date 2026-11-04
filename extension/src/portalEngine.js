@@ -570,6 +570,16 @@ const PortalEngine = {
   }
 };
 
+/** Street lines are typed. A search button inside the same Workday field is not the answer list. */
+function isWorkdayStreetLine(label) {
+  return /address\s*line\s*[12]|street address|\baddress\s*[12]\b/i.test(String(label || ''));
+}
+
+function workdayTextControl(field) {
+  return field.querySelector('textarea')
+    || field.querySelector('input:not([type="hidden"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="checkbox"]):not([type="radio"])');
+}
+
 // ── Portal: Workday ───────────────────────────────────────────────────────────
 
 PortalEngine.register('workday', {
@@ -640,6 +650,22 @@ PortalEngine.register('workday', {
           required: checkbox.required || checkbox.getAttribute('aria-required') === 'true',
           options: null, placeholder: null,
           currentValue: checkbox.checked ? 'Yes' : '',
+        });
+        return;
+      }
+
+      // Address Line 1/2 stay text even when Workday nests an address-search listbox.
+      if (isWorkdayStreetLine(label) && workdayTextControl(field)) {
+        const input = workdayTextControl(field);
+        pushField({
+          label,
+          type: input.tagName === 'TEXTAREA' ? 'textarea' : (input.type || 'text'),
+          name: input.name || null,
+          id: input.id || null,
+          required: input.required || input.getAttribute('aria-required') === 'true',
+          options: null,
+          placeholder: input.placeholder || null,
+          currentValue: input.value || null,
         });
         return;
       }
@@ -807,6 +833,15 @@ PortalEngine.register('workday', {
           }
         }
         continue;
+      }
+
+      if (isWorkdayStreetLine(label)) {
+        const street = workdayTextControl(field);
+        if (street) {
+          setNativeValue(street, answer, label);
+          filled++;
+          continue;
+        }
       }
 
       // Workday listbox (Country, State, Phone Device Type) — never type into the companion <input>.

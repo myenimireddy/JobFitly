@@ -2,7 +2,7 @@
 
 const { prisma } = require('../../lib/prisma');
 const LLMFactory = require('../../llm/factory');
-const { sanitizeProfile, restoreAnswers, isCloudProvider } = require('../../lib/piiSanitizer');
+const { sanitizeProfile, restoreAnswers, restoreScrubbedContacts, isCloudProvider } = require('../../lib/piiSanitizer');
 const config = require('../../config');
 const {
   canonicalKey,
@@ -65,7 +65,9 @@ async function loadProfile(profileId) {
   }
   const row = await prisma.profile.findUnique({ where: { id } });
   if (!row) throw Object.assign(new Error('Profile not found'), { statusCode: 404 });
-  return { row, id, parsed: parseProfile(row) };
+  const parsed = parseProfile(row);
+  restoreScrubbedContacts(parsed, row.rawText);
+  return { row, id, parsed };
 }
 
 class AutofillService {
