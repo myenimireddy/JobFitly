@@ -2,6 +2,7 @@
  * Safe JSON parser utility for LLM responses
  * Strips markdown fences and parses safely
  */
+const safeLogger = require('../lib/safeLogger');
 
 /**
  * Clean LLM response by removing markdown fences
@@ -41,7 +42,8 @@ function safeParseJson(raw) {
     return JSON.parse(cleaned);
   } catch (error) {
     if (error instanceof SyntaxError) {
-      console.error('JSON parse error. Raw response:', raw);
+      console.error('JSON parse error. Raw response hidden; set DEBUG_LLM_CONTENT=true for local debugging.');
+      safeLogger.content('unparseable LLM response', raw);
       throw new Error(`Invalid JSON from LLM: ${error.message}`);
     }
     throw error;

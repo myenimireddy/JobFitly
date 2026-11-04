@@ -15,6 +15,7 @@
  */
 
 const COVERAGE_THRESHOLD = 0.70; // flag if < 70% of lines are categorized
+const safeLogger = require('../safeLogger');
 
 /**
  * Flatten all categorized text from parsedData into a single set of lines
@@ -150,8 +151,7 @@ function auditCoverage(rawText, parsedData) {
     console.log(`    "${s.name}" → ${s.lines.length} lines`)
   );
   if (coverage.uncoveredLines.length > 0) {
-    console.log('  sample uncovered lines:');
-    coverage.uncoveredLines.slice(0, 10).forEach(l => console.log(`    "${l}"`));
+    safeLogger.content('resume parse uncovered lines', coverage.uncoveredLines.slice(0, 10));
   }
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 

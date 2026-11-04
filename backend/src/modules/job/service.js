@@ -1,6 +1,7 @@
 const { prisma } = require('../../lib/prisma');
 const { analyzeJobText } = require('../../lib/fallback');
 const { parseJobWithLLM } = require('../../lib/llmJobParser');
+const safeLogger = require('../../lib/safeLogger');
 
 function serializeJob(job) {
   return {
@@ -23,10 +24,9 @@ class JobService {
    */
   async extractAndParse(url, rawText) {
     console.log('\n━━━ [job] RAW TEXT RECEIVED ━━━');
-    console.log(`  url   : ${url}`);
+    safeLogger.content('job URL', url);
     console.log(`  chars : ${rawText.length}`);
-    console.log('  first 300 chars:');
-    console.log(' ', rawText.slice(0, 300).replace(/\n/g, '\n  '));
+    safeLogger.content('job text sample', rawText.slice(0, 300));
 
     // Try LLM parser first, fall back to regex
     let parsedData = await parseJobWithLLM(rawText);
@@ -86,7 +86,7 @@ class JobService {
    */
   async analyzeAndExtractFields(url, html, profileId) {
     console.log('\n━━━ [job] ANALYZE HTML ━━━');
-    console.log(`  url      : ${url}`);
+    safeLogger.content('job URL', url);
     console.log(`  html len : ${html.length}`);
     console.log(`  profileId: ${profileId}`);
 

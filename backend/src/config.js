@@ -13,6 +13,8 @@ const packageJson = require('../package.json');
 const isDev = (process.env.NODE_ENV || 'development') === 'development';
 
 const config = {
+  // Local-first by default. Override only behind a trusted network boundary.
+  host: process.env.HOST || '127.0.0.1',
   port: parseInt(process.env.PORT, 10) || 3000,
   nodeEnv: process.env.NODE_ENV || 'development',
   // Dev CORS is wide so extension content scripts on ATS hosts can call the API.
