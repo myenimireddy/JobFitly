@@ -4,44 +4,16 @@ Short walkthroughs for Side Panel setup and day-to-day use. Watch in order after
 
 Written steps: [setup.md](../setup.md) · product scope: [beta.md](../beta.md).
 
-GitHub can’t play YouTube inline — click a thumbnail to open the video.
+Click a thumbnail to open YouTube (GitHub can’t play video inline).
 
----
+**1. [Configure Groq](https://youtu.be/7iTxzJjfT50)** — paste API key in Settings  
+<a href="https://youtu.be/7iTxzJjfT50"><img src="https://img.youtube.com/vi/7iTxzJjfT50/maxresdefault.jpg" alt="Configure Groq" width="480" /></a>
 
-## 1. Configure Groq
+**2. [Add a profile](https://youtu.be/h0eY4h-l2Ls)** — upload resume + application capture  
+<a href="https://youtu.be/h0eY4h-l2Ls"><img src="https://img.youtube.com/vi/h0eY4h-l2Ls/maxresdefault.jpg" alt="Add a profile" width="480" /></a>
 
-Paste a Groq API key in Side Panel **Settings** so Analyze / parse / drafts use fast cloud inference.
+**3. [Analyze a job](https://youtu.be/vcPUH-qn8-U)** — fit score on the open posting  
+<a href="https://youtu.be/vcPUH-qn8-U"><img src="https://img.youtube.com/vi/vcPUH-qn8-U/maxresdefault.jpg" alt="Analyze a job" width="480" /></a>
 
-[![Configure Groq](https://img.youtube.com/vi/7iTxzJjfT50/hqdefault.jpg)](https://youtu.be/7iTxzJjfT50)
-
-[youtu.be/7iTxzJjfT50](https://youtu.be/7iTxzJjfT50)
-
----
-
-## 2. Add a profile
-
-Upload a resume (try a PDF from [`docs/samples/resumes/`](../samples/resumes/)) and complete application-profile capture.
-
-[![Add a profile](https://img.youtube.com/vi/h0eY4h-l2Ls/hqdefault.jpg)](https://youtu.be/h0eY4h-l2Ls)
-
-[youtu.be/h0eY4h-l2Ls](https://youtu.be/h0eY4h-l2Ls)
-
----
-
-## 3. Analyze a job description
-
-Open a job posting and run **Analyze this job** for fit scoring / narrative.
-
-[![Analyze a job](https://img.youtube.com/vi/vcPUH-qn8-U/hqdefault.jpg)](https://youtu.be/vcPUH-qn8-U)
-
-[youtu.be/vcPUH-qn8-U](https://youtu.be/vcPUH-qn8-U)
-
----
-
-## 4. Human-in-the-loop form fill
-
-On a supported ATS apply page, run **Fill Form**. Known fields fill with pacing; LLM / missing fields pause for your review before inject. JobFitly never clicks Submit.
-
-[![HITL form fill](https://img.youtube.com/vi/lTqOIXQa-9E/hqdefault.jpg)](https://youtu.be/lTqOIXQa-9E)
-
-[youtu.be/lTqOIXQa-9E](https://youtu.be/lTqOIXQa-9E)
+**4. [HITL form fill](https://youtu.be/lTqOIXQa-9E)** — review each field; never auto-Submit  
+<a href="https://youtu.be/lTqOIXQa-9E"><img src="https://img.youtube.com/vi/lTqOIXQa-9E/maxresdefault.jpg" alt="HITL form fill" width="480" /></a>

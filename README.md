@@ -25,25 +25,20 @@ Works with Greenhouse, Lever, Workday, Ashby, plus a generic HTML fallback — d
 
 ## Video tutorials (beta)
 
-Watch in order after [setup](docs/setup.md) (bootstrap + load unpacked extension). Full page: **[docs/tutorials/](docs/tutorials/)**.
+Watch in order after [setup](docs/setup.md). Details: **[docs/tutorials/](docs/tutorials/)**.  
+Click a thumbnail to open YouTube (GitHub can’t play video inline).
 
-GitHub can’t play YouTube inline — click a thumbnail to open the video.
+**1. Configure Groq** — paste API key in Settings  
+<a href="https://youtu.be/7iTxzJjfT50"><img src="https://img.youtube.com/vi/7iTxzJjfT50/maxresdefault.jpg" alt="Configure Groq" width="480" /></a>
 
-### 1. Configure Groq
+**2. Add a profile** — upload resume + application capture  
+<a href="https://youtu.be/h0eY4h-l2Ls"><img src="https://img.youtube.com/vi/h0eY4h-l2Ls/maxresdefault.jpg" alt="Add a profile" width="480" /></a>
 
-[![Configure Groq](https://img.youtube.com/vi/7iTxzJjfT50/hqdefault.jpg)](https://youtu.be/7iTxzJjfT50)
+**3. Analyze a job** — fit score on the open posting  
+<a href="https://youtu.be/vcPUH-qn8-U"><img src="https://img.youtube.com/vi/vcPUH-qn8-U/maxresdefault.jpg" alt="Analyze a job" width="480" /></a>
 
-### 2. Add a profile
-
-[![Add a profile](https://img.youtube.com/vi/h0eY4h-l2Ls/hqdefault.jpg)](https://youtu.be/h0eY4h-l2Ls)
-
-### 3. Analyze a job
-
-[![Analyze a job](https://img.youtube.com/vi/vcPUH-qn8-U/hqdefault.jpg)](https://youtu.be/vcPUH-qn8-U)
-
-### 4. HITL form fill
-
-[![HITL form fill](https://img.youtube.com/vi/lTqOIXQa-9E/hqdefault.jpg)](https://youtu.be/lTqOIXQa-9E)
+**4. HITL form fill** — review each field; never auto-Submit  
+<a href="https://youtu.be/lTqOIXQa-9E"><img src="https://img.youtube.com/vi/lTqOIXQa-9E/maxresdefault.jpg" alt="HITL form fill" width="480" /></a>
 
 ---
 
