@@ -1,12 +1,13 @@
 # Manual-only UI e2e against local portal HTML fixtures (no live ATS).
 # GitHub Free: ~2,000 minutes/month — run when you need confidence, not on every push.
+# Default: ROLE_KEY=fullstack (~4 portal runs). Use role_key=all only when you mean the full 10×4.
 name: Extension UI e2e (manual)
 
 on:
   workflow_dispatch:
     inputs:
       role_key:
-        description: "ROLE_KEY filter. Default fullstack (~1–2 min). Empty = all 10 personas (much slower)."
+        description: "Persona filter. fullstack (default, cheap). all = 10 personas (slow). Empty also becomes fullstack."
         required: false
         default: "fullstack"
       portal:
@@ -29,7 +30,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      ROLE_KEY: ${{ inputs.role_key }}
+      # Empty / whitespace must not unlock the full 10×4 matrix (burns free minutes).
+      ROLE_KEY: ${{ inputs.role_key || 'fullstack' }}
       PORTAL: ${{ inputs.portal }}
       # Required for CI: without Groq the backend tries Ollama and hangs ~3–10 min per upload.
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
@@ -44,16 +46,26 @@ jobs:
             echo "::error::Add repository secret GROQ_API_KEY (Settings → Secrets). Without it resume parse hangs waiting for Ollama and each test burns ~3 minutes."
             exit 1
           fi
+          echo "ROLE_KEY=${ROLE_KEY:-fullstack} PORTAL=${PORTAL:-all-four}"
+          if [ "${ROLE_KEY}" = "all" ]; then
+            echo "::warning::Full 10×4 matrix — expect a long run on free-tier minutes."
+          fi
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
           cache-dependency-path: |
             package-lock.json
             backend/package-lock.json
             extension/package-lock.json
+
+      - name: Cache Playwright Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('extension/package-lock.json') }}
 
       - name: Install root + backend + extension
         run: |
@@ -68,9 +80,12 @@ jobs:
           # Prefer Groq in CI (no Ollama on the runner).
           sed -i 's/^GROQ_API_KEY=.*/GROQ_API_KEY='"$GROQ_API_KEY"'/' backend/.env || true
           grep -q '^GROQ_API_KEY=' backend/.env || echo "GROQ_API_KEY=$GROQ_API_KEY" >> backend/.env
+          sed -i 's/^GROQ_MODEL=.*/GROQ_MODEL=openai\/gpt-oss-20b/' backend/.env || true
+          grep -q '^GROQ_MODEL=' backend/.env || echo 'GROQ_MODEL=openai/gpt-oss-20b' >> backend/.env
           cd backend && npx prisma generate && npx prisma db push --accept-data-loss
           mkdir -p backend/data
-          printf '%s\n' '{"forceOllama":false}' > backend/data/llm-settings.json
+          # Persist key in settings file so resolveLlmRuntime cannot fall back to Ollama.
+          node -e "const fs=require('fs'); fs.writeFileSync('backend/data/llm-settings.json', JSON.stringify({ forceOllama: false, groqApiKey: process.env.GROQ_API_KEY }, null, 2));"
 
       - name: Generate demo resume PDFs
         run: |
@@ -88,6 +103,13 @@ jobs:
             sleep 1
           done
           curl -sf http://localhost:3000/health
+          # Fail fast — empty Groq / forced Ollama burns minutes on every upload.
+          STATUS="$(curl -sf http://localhost:3000/api/settings/llm)"
+          echo "$STATUS"
+          echo "$STATUS" | grep -q '"provider":"groq"' || {
+            echo "::error::Backend is not using Groq. Check GROQ_API_KEY secret and llm-settings.json."
+            exit 1
+          }
 
       - name: UI matrix (local fixtures)
         working-directory: extension
@@ -101,6 +123,9 @@ jobs:
       - name: Refill spec
         if: ${{ inputs.include_refill }}
         working-directory: extension
+        env:
+          # Refill is always one persona; keep it cheap even when matrix used role_key=all.
+          ROLE_KEY: fullstack
         run: xvfb-run -a npx playwright test --project=e2e-ui e2e/live-extension-ui-refill.spec.js --retries=0
 
       - name: Upload artifacts
@@ -112,4 +137,4 @@ jobs:
             extension/e2e/artifacts/extension-ui/
             extension/test-results/
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 7
