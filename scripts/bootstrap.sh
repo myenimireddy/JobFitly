@@ -68,18 +68,26 @@ fi
 
 if [[ "$INSTALL_OLLAMA" == "yes" ]]; then
   info "Installing / checking Ollama"
+  # Never `brew install ollama` — Homebrew often compiles huge deps from source
+  # when bottles/CLT are mismatched. Prefer the official binary installer.
   if ! need_cmd ollama; then
-    if [[ "$OS" == "Darwin" ]] && need_cmd brew; then
-      brew install ollama
+    info "Installing Ollama via https://ollama.com/install.sh (prebuilt binary)"
+    curl -fsSL https://ollama.com/install.sh | sh
+  fi
+  if need_cmd ollama; then
+    ok "Ollama $(command -v ollama)"
+    # Small model for local fill / parse when Groq is off
+    MODEL="${OLLAMA_MODEL:-qwen2.5:3b}"
+    info "Pulling model $MODEL (one-time download)"
+    ollama pull "$MODEL" || warn "Could not pull model now — run later: ollama pull $MODEL"
+  else
+    warn "ollama CLI not on PATH yet."
+    if [[ "$OS" == "Darwin" ]]; then
+      warn "On Mac: download the app from https://ollama.com/download/mac , open it, then re-run bootstrap."
     else
-      curl -fsSL https://ollama.com/install.sh | sh
+      warn "Re-run: curl -fsSL https://ollama.com/install.sh | sh"
     fi
   fi
-  ok "Ollama $(command -v ollama)"
-  # Small model for local fill / parse when Groq is off
-  MODEL="${OLLAMA_MODEL:-qwen2.5:3b}"
-  info "Pulling model $MODEL (one-time download)"
-  ollama pull "$MODEL" || warn "Could not pull model now — run later: ollama pull $MODEL"
 else
   warn "Skipping Ollama — add a Groq key in Side Panel → Settings after first run"
 fi

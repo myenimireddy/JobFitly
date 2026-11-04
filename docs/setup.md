@@ -19,10 +19,10 @@ chmod +x scripts/bootstrap.sh scripts/start.sh
 
 Prefer **skipping Ollama** in the prompt if you will paste a Groq key.
 
-Then in Chrome:
+`extension/dist` is **not** in git — `bootstrap.sh` builds it. After bootstrap finishes, in Chrome:
 
 1. `chrome://extensions` → enable **Developer mode**
-2. **Load unpacked** → `JobFitly/extension/dist`
+2. **Load unpacked** → `JobFitly/extension/dist` (created by the build step above)
 3. Open the Side Panel → **Settings (gear)** → paste a key from [console.groq.com/keys](https://console.groq.com/keys)
 4. (Optional) Settings → **Backend URL** if your API is not on `http://localhost:3000`  
    (Changing URL clears the loaded profile — re-upload or pick from the switcher on the new backend.)
@@ -64,7 +64,8 @@ Keep that terminal open. Reload the extension on `chrome://extensions` after pul
 | Symptom | Fix |
 |---------|-----|
 | Backend offline | `./scripts/start.sh` · check Settings → Backend URL |
-| Analyze / LLM offline | Groq key **or** `INSTALL_OLLAMA=yes ./scripts/bootstrap.sh` |
+| Analyze / LLM offline | Groq key **or** install Ollama from [ollama.com/download](https://ollama.com/download) (do **not** `brew install ollama` — that can compile for hours) |
+| Homebrew compiling LLVM/Rust for Ollama | Cancel with Ctrl+C · skip Ollama in bootstrap · use Groq, **or** install the Mac app from [ollama.com/download/mac](https://ollama.com/download/mac) |
 | Stale UI | `cd extension && npm run build` → Reload extension |
 | Wrong person’s resume | Clear, then upload or pick from switcher — panel no longer auto-loads `/latest` |
 | Windows | Use [WSL](https://learn.microsoft.com/windows/wsl/) and the same scripts, or install [Node](https://nodejs.org) and run backend/extension `npm` commands manually |
