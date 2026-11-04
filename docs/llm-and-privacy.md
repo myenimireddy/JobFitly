@@ -8,6 +8,7 @@ From `backend/src/lib/llmSettings.js`:
 
 1. Settings **Use Ollama** (`forceOllama`) → local Ollama  
 2. Else usable Groq key (Side Panel Settings or `GROQ_API_KEY`) → **Groq (fast)**  
+   Model id comes from Groq’s live model list. Preference order is [`backend/config/groq-models.json`](../backend/config/groq-models.json) (edit that file when you want a different default — a retired id is skipped automatically).  
 3. Else → **Ollama (local, slower)**
 
 ## What leaves the machine

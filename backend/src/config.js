@@ -12,31 +12,6 @@ const packageJson = require('../package.json');
 
 const isDev = (process.env.NODE_ENV || 'development') === 'development';
 
-/** Free/dev-tier defaults — remaps retired Groq ids still sitting in old .env files. */
-const DEFAULT_GROQ_MODEL = 'openai/gpt-oss-20b';
-const DECOMMISSIONED_GROQ_MODELS = new Set([
-  'llama3-70b-8192',
-  'llama3-8b-8192',
-  'llama-3.3-70b-versatile',
-  'llama-3.1-8b-instant',
-  'llama-3.3-70b-specdec',
-  'gemma-7b-it',
-  'mixtral-8x7b-32768',
-]);
-
-function resolveGroqModel() {
-  const raw = String(process.env.GROQ_MODEL || '').trim();
-  if (!raw) return DEFAULT_GROQ_MODEL;
-  if (DECOMMISSIONED_GROQ_MODELS.has(raw)) {
-    console.warn(
-      `[config] GROQ_MODEL=${raw} is decommissioned on Groq — using ${DEFAULT_GROQ_MODEL}. `
-      + `Update backend/.env (see .env.example).`,
-    );
-    return DEFAULT_GROQ_MODEL;
-  }
-  return raw;
-}
-
 const config = {
   port: parseInt(process.env.PORT, 10) || 3000,
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -53,10 +28,8 @@ const config = {
   ollamaModel: process.env.OLLAMA_MODEL || 'llama3.2',
   ollamaBaseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
   groqApiKey: process.env.GROQ_API_KEY,
-  groqModel: resolveGroqModel(),
+  // Optional hint. Live catalog (lib/groqModels.js) overrides this if it is retired.
+  groqModel: String(process.env.GROQ_MODEL || '').trim(),
 };
 
 module.exports = config;
-module.exports.resolveGroqModel = resolveGroqModel;
-module.exports.DEFAULT_GROQ_MODEL = DEFAULT_GROQ_MODEL;
-module.exports.DECOMMISSIONED_GROQ_MODELS = DECOMMISSIONED_GROQ_MODELS;
