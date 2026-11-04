@@ -52,6 +52,23 @@ function humanFillOrder(a, b) {
   return rank(a.label) - rank(b.label);
 }
 
+function fieldIdentity(field = {}) {
+  return [field.label || '', field.experienceIndex ?? '', field.id || '', field.name || ''].join('::');
+}
+
+async function requestAutofillPlan(profileId, fields, pageContext, fillMode) {
+  const response = await fetch(`${await getApiBase()}/autofill/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ profileId, fillMode, fields, pageContext }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || 'Autofill failed');
+  }
+  return response.json();
+}
+
 function isConsentField(label) {
   return /i agree|i consent|by selecting|by checking|privacy|gdpr|consent to|terms and conditions/i
     .test(String(label || ''));
@@ -589,30 +606,32 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
       pageContextRef.current = { url: scraped.url, title: scraped.title };
       const selection = selectFieldsForMode(scraped.fields, fillMode);
       const selectedFields = selection.fields;
+      const seenFieldKeys = new Set(scraped.fields.map(fieldIdentity));
+      let optionalSkipped = selection.stats.optionalSkipped;
       const scrapedComplete = selectedFields.filter((f) => isPageValueComplete(f.currentValue, f)).length;
 
       setProgressLabel('Matching answers…');
-      const response = await fetch(`${await getApiBase()}/autofill/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          profileId: profile.id,
-          fillMode,
-          fields: selectedFields,
-          pageContext: pageContextRef.current,
-        }),
-      });
+      const result = await requestAutofillPlan(
+        profile.id,
+        selectedFields,
+        pageContextRef.current,
+        fillMode,
+      );
       if (!stillThisRun()) return;
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || 'Autofill failed');
-      }
-
-      const result = await response.json();
       const planned = [...(result.data.answers || [])].filter((f) => !f.skip);
-      const queue = planned
+      let queue = planned
         .filter((f) => !isPageValueComplete(f.currentValue, f))
         .sort(humanFillOrder);
+      let unknownReviewed = 0;
+      const reviewedUnknown = new Set();
+      const markUnknownReview = (field) => {
+        if (field.requiredStatus !== 'unknown') return;
+        const key = `${field.label}::${field.experienceIndex ?? ''}`;
+        if (reviewedUnknown.has(key)) return;
+        reviewedUnknown.add(key);
+        unknownReviewed += 1;
+        setRunStats((current) => ({ ...current, unknownReviewed }));
+      };
       setSkippedFilled(scrapedComplete);
       setProgressTotal(queue.length);
       setRunStats({
@@ -620,8 +639,8 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
         filled: 0,
         skipped: 0,
         skippedFilled: scrapedComplete,
-        optionalSkipped: selection.stats.optionalSkipped,
-        unknownReviewed: selection.stats.unknown,
+        optionalSkipped,
+        unknownReviewed: 0,
       });
 
       if (queue.length === 0) {
@@ -662,6 +681,7 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
         const needsReview = field.bucket === 'ask' || field.source === 'llm';
 
         if (!answer) {
+          markUnknownReview(field);
           const pick = await askHuman(tabId, field, '');
           if (!stillThisRun() || !pick) {
             if (stillThisRun()) setErrorMsg('Stopped.');
@@ -674,6 +694,7 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
           }
           answer = pick.value;
         } else if (needsReview) {
+          markUnknownReview(field);
           const pick = await askHuman(tabId, field, answer);
           if (!stillThisRun() || !pick) {
             if (stillThisRun()) setErrorMsg('Stopped.');
@@ -694,6 +715,7 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
 
         // Inject missed → open that field's real options and ask.
         if (!injectResult.ok) {
+          markUnknownReview(field);
           const pick = await askHuman(tabId, { ...field, answer: null }, injectResult.suggested || answer);
           if (!stillThisRun() || !pick) break;
           if (pick.kind === 'skip') {
@@ -713,13 +735,48 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
 
         filled += injectResult.filled || 1;
         setFilledCount(filled);
+
+        // Choice answers can reveal conditional questions. Re-scrape once the
+        // page has reacted and append only newly visible fields to this run.
+        if (['select', 'radio', 'checkbox'].includes(String(field.type || '').toLowerCase())) {
+          await sleep(180);
+          const refreshed = await sendMessageSafe(tabId, { action: 'scrapeFormFields' }, 120000);
+          if (!stillThisRun()) return;
+          const freshFields = (refreshed?.fields || []).filter((candidate) => {
+            const key = fieldIdentity(candidate);
+            if (seenFieldKeys.has(key)) return false;
+            seenFieldKeys.add(key);
+            return true;
+          });
+          if (freshFields.length) {
+            const freshSelection = selectFieldsForMode(freshFields, fillMode);
+            optionalSkipped += freshSelection.stats.optionalSkipped;
+            if (freshSelection.fields.length) {
+              const freshResult = await requestAutofillPlan(
+                profile.id,
+                freshSelection.fields,
+                pageContextRef.current,
+                fillMode,
+              );
+              if (!stillThisRun()) return;
+              const additions = [...(freshResult.data.answers || [])]
+                .filter((candidate) => !candidate.skip && !isPageValueComplete(candidate.currentValue, candidate))
+                .sort(humanFillOrder);
+              if (additions.length) {
+                queue = [...queue, ...additions];
+                setProgressTotal(queue.length);
+              }
+            }
+          }
+        }
+
         setRunStats({
           identified: queue.length,
           filled,
           skipped: skippedUser,
           skippedFilled: scrapedComplete,
-          optionalSkipped: selection.stats.optionalSkipped,
-          unknownReviewed: selection.stats.unknown,
+          optionalSkipped,
+          unknownReviewed,
         });
         // Brief pause between fields — human pacing.
         await sleep(280 + Math.floor(Math.random() * 180));
@@ -732,8 +789,8 @@ export function AutofillSection({ profile, activeTabId = null, onFillActiveChang
           filled,
           skipped: skippedUser,
           skippedFilled: scrapedComplete,
-          optionalSkipped: selection.stats.optionalSkipped,
-          unknownReviewed: selection.stats.unknown,
+          optionalSkipped,
+          unknownReviewed,
         });
         setStatus('done');
         setProgressLabel('');

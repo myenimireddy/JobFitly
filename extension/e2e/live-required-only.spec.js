@@ -25,7 +25,11 @@ for (const portal of ['greenhouse', 'lever', 'ashby', 'workday']) {
 
       expect(fields.length).toBeGreaterThan(0);
       expect(selection.stats.required, `${portal} should expose at least one mandatory field`).toBeGreaterThan(0);
+      expect(fields.filter((field) => field.requiredStatus === 'optional')
+        .every((field) => field.requiredEvidence.length > 0)).toBe(true);
       expect(selection.fields.some((field) => field.requiredStatus === 'optional')).toBe(false);
+      expect(selection.fields.filter((field) => field.requiredStatus === 'unknown').length)
+        .toBe(selection.stats.unknown);
       expect(selection.fields.length).toBe(fields.length - selection.stats.optionalSkipped);
     } finally {
       await page.close();

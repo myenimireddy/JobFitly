@@ -194,6 +194,8 @@ test('panel source keeps those rules wired', () => {
   assert.equal(autofillUi.includes('data-testid="fill-mode-required-only"'), true);
   assert.equal(autofillUi.includes('data-testid="fill-mode-all"'), true);
   assert.equal(autofillUi.includes('selectFieldsForMode(scraped.fields, fillMode)'), true);
+  assert.equal(autofillUi.includes('freshFields'), true);
+  assert.equal(autofillUi.includes('setProgressTotal(queue.length)'), true);
 });
 
 console.log('panel edges passed');
