@@ -26,6 +26,12 @@ What JobFitly **does** for beta, and what it deliberately does **not**.
 | Documents (cover letter / tailored bullets) UI | API exists; product UI is a follow-up milestone |
 | Workday multi-page wizard depth | First screens work; deeper multi-step is tracked separately |
 
-## Issues
+## Milestone progress ([v1 beta stable](https://github.com/myenimireddy/JobFitly/milestone/1))
 
-Milestone: [v1 beta stable](https://github.com/myenimireddy/JobFitly/milestone/1)
+| Issue | Status |
+|-------|--------|
+| [#27](https://github.com/myenimireddy/JobFitly/issues/27) Configurable API base URL | **Done** — Settings → Backend URL |
+| [#28](https://github.com/myenimireddy/JobFitly/issues/28) Profile Clear vs Delete + multi-resume | **Done** — Clear / Delete / Load latest / switcher |
+| [#26](https://github.com/myenimireddy/JobFitly/issues/26) Cold-start pack (docs, tag, walkthrough) | **Done** — `docs/beta.md`, tag `beta`, [tutorials](tutorials/) |
+| [#25](https://github.com/myenimireddy/JobFitly/issues/25) CI `GROQ_API_KEY` + green manual UI e2e | Open — ops: add secret, run Actions once green |
+| [#24](https://github.com/myenimireddy/JobFitly/issues/24) Manual portal smoke sign-off | Open — human Pass/Fail matrix still needed |

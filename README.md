@@ -23,6 +23,19 @@ Works with Greenhouse, Lever, Workday, Ashby, plus a generic HTML fallback — d
 
 ---
 
+## Video tutorials (beta)
+
+Watch in order after [setup](docs/setup.md) (bootstrap + load unpacked extension). Full page: **[docs/tutorials/](docs/tutorials/)**.
+
+| Step | Video |
+|------|--------|
+| 1. Configure Groq | [01-groq-configuration.mp4](docs/tutorials/01-groq-configuration.mp4) |
+| 2. Add a profile | [02-adding-profile.mp4](docs/tutorials/02-adding-profile.mp4) |
+| 3. Analyze a job | [03-job-description-analysis.mp4](docs/tutorials/03-job-description-analysis.mp4) |
+| 4. HITL form fill | [04-hitl-form-fill.mp4](docs/tutorials/04-hitl-form-fill.mp4) |
+
+---
+
 ## Quick setup
 
 **Beta testers (recommended):**
@@ -48,6 +61,7 @@ Product scope (in / out of beta): **[docs/beta.md](docs/beta.md)**
 |-----|--------|
 | [docs/process.md](docs/process.md) | Design → develop → test → release |
 | [docs/setup.md](docs/setup.md) | Install & daily run |
+| [docs/tutorials/](docs/tutorials/) | Video walkthroughs (Groq → Fill Form) |
 | [docs/beta.md](docs/beta.md) | Beta scope / gaps |
 | [docs/development.md](docs/development.md) | Make, env, layout |
 | [docs/portals.md](docs/portals.md) | ATS support |
