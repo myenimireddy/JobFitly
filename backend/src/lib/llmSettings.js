@@ -61,7 +61,7 @@ function resolveLlmRuntime() {
     return {
       provider: 'ollama',
       groqApiKey: null,
-      groqModel: config.groqModel || 'llama3-70b-8192',
+      groqModel: config.groqModel || 'openai/gpt-oss-20b',
       ollamaModel: config.ollamaModel || 'llama3.2',
       ollamaBaseUrl: config.ollamaBaseUrl || 'http://localhost:11434',
       source: 'forced-local',
@@ -73,7 +73,7 @@ function resolveLlmRuntime() {
     return {
       provider: 'groq',
       groqApiKey,
-      groqModel: config.groqModel || 'llama3-70b-8192',
+      groqModel: config.groqModel || 'openai/gpt-oss-20b',
       ollamaModel: config.ollamaModel,
       ollamaBaseUrl: config.ollamaBaseUrl,
       source: getStoredGroqKey() ? 'settings' : 'env',
@@ -82,7 +82,7 @@ function resolveLlmRuntime() {
   return {
     provider: 'ollama',
     groqApiKey: null,
-    groqModel: config.groqModel || 'llama3-70b-8192',
+    groqModel: config.groqModel || 'openai/gpt-oss-20b',
     ollamaModel: config.ollamaModel || 'llama3.2',
     ollamaBaseUrl: config.ollamaBaseUrl || 'http://localhost:11434',
     source: 'fallback',

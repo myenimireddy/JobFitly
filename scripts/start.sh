@@ -56,7 +56,7 @@ if [[ "$use_groq" == false ]] && command -v ollama >/dev/null 2>&1; then
     ok "Ollama already running"
   fi
 elif [[ "$use_groq" == true ]]; then
-  ok "Groq key active — skipping Ollama"
+  ok "Groq key active — LLM calls use Groq (Ollama ignored even if already running)"
 else
   printf '    ! No Groq key and no Ollama — Analyze will fail until you add one\n'
 fi
