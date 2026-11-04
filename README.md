@@ -29,10 +29,10 @@ Watch in order after [setup](docs/setup.md) (bootstrap + load unpacked extension
 
 | Step | Video |
 |------|--------|
-| 1. Configure Groq | [01-groq-configuration.mp4](docs/tutorials/01-groq-configuration.mp4) |
-| 2. Add a profile | [02-adding-profile.mp4](docs/tutorials/02-adding-profile.mp4) |
-| 3. Analyze a job | [03-job-description-analysis.mp4](docs/tutorials/03-job-description-analysis.mp4) |
-| 4. HITL form fill | [04-hitl-form-fill.mp4](docs/tutorials/04-hitl-form-fill.mp4) |
+| 1. Configure Groq | [YouTube](https://youtu.be/7iTxzJjfT50) |
+| 2. Add a profile | [YouTube](https://youtu.be/h0eY4h-l2Ls) |
+| 3. Analyze a job | [YouTube](https://youtu.be/vcPUH-qn8-U) |
+| 4. HITL form fill | [YouTube](https://youtu.be/lTqOIXQa-9E) |
 
 ---
 

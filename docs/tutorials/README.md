@@ -10,9 +10,9 @@ Written steps: [setup.md](../setup.md) · product scope: [beta.md](../beta.md).
 
 Paste a Groq API key in Side Panel **Settings** so Analyze / parse / drafts use fast cloud inference.
 
-[Watch: Groq configuration](./01-groq-configuration.mp4)
+[Watch on YouTube](https://youtu.be/7iTxzJjfT50)
 
-<video src="./01-groq-configuration.mp4" controls width="720"></video>
+https://youtu.be/7iTxzJjfT50
 
 ---
 
@@ -20,9 +20,9 @@ Paste a Groq API key in Side Panel **Settings** so Analyze / parse / drafts use 
 
 Upload a resume (try a PDF from [`docs/samples/resumes/`](../samples/resumes/)) and complete application-profile capture.
 
-[Watch: Adding a profile](./02-adding-profile.mp4)
+[Watch on YouTube](https://youtu.be/h0eY4h-l2Ls)
 
-<video src="./02-adding-profile.mp4" controls width="720"></video>
+https://youtu.be/h0eY4h-l2Ls
 
 ---
 
@@ -30,9 +30,9 @@ Upload a resume (try a PDF from [`docs/samples/resumes/`](../samples/resumes/)) 
 
 Open a job posting and run **Analyze this job** for fit scoring / narrative.
 
-[Watch: Job description analysis](./03-job-description-analysis.mp4)
+[Watch on YouTube](https://youtu.be/vcPUH-qn8-U)
 
-<video src="./03-job-description-analysis.mp4" controls width="720"></video>
+https://youtu.be/vcPUH-qn8-U
 
 ---
 
@@ -40,6 +40,6 @@ Open a job posting and run **Analyze this job** for fit scoring / narrative.
 
 On a supported ATS apply page, run **Fill Form**. Known fields fill with pacing; LLM / missing fields pause for your review before inject. JobFitly never clicks Submit.
 
-[Watch: HITL form fill](./04-hitl-form-fill.mp4)
+[Watch on YouTube](https://youtu.be/lTqOIXQa-9E)
 
-<video src="./04-hitl-form-fill.mp4" controls width="720"></video>
+https://youtu.be/lTqOIXQa-9E
