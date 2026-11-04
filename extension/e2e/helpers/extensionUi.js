@@ -60,7 +60,8 @@ export function loadUiMatrix() {
       sponsorship: /diego|maya/i.test(p.key) ? 'Yes' : 'No',
     };
   });
-  if (process.env.ROLE_KEY) {
+  // ROLE_KEY=all (or unset locally) keeps every persona. CI coerces empty → fullstack.
+  if (process.env.ROLE_KEY && process.env.ROLE_KEY !== 'all') {
     profiles = profiles.filter((p) => p.key === process.env.ROLE_KEY);
   }
   let portals = [...PORTAL_ORDER];
@@ -329,8 +330,11 @@ export async function completeApplicationCapture(panel, persona = null) {
   await fillIfEmpty(/18 or over/i, 'Yes');
 
   await save.click();
-  await panel.waitForSelector('text=/Application profile ready|Still needed/i', { timeout: 30_000 });
-  // "Still needed" banner can remount while React settles — dismiss without blocking Fill Form.
+  // Save closes the capture form. Ready banner or incomplete CTA both mean we can continue.
+  await panel.waitForSelector(
+    'text=/Application profile ready|Application details incomplete|Complete details|Edit details|Still needed/i',
+    { timeout: 30_000 },
+  );
   const later = panel.getByRole('button', { name: /^Later$/i });
   if (await later.isVisible({ timeout: 1500 }).catch(() => false)) {
     await later.click({ force: true }).catch(() => {});
