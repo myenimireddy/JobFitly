@@ -217,9 +217,33 @@
         </div>
       </div>
 
-      <div class="checkbox" id="gdpr_demographic_data_consent_given">
+      <div class="checkbox" id="gdpr_demographic_data_consent_given" data-testid="ks-checkbox">
         <input type="checkbox" id="gdpr_demographic_data_consent_given_1" name="gdpr_demographic_data_consent_given" aria-required="true" required value="1" />
         <label for="gdpr_demographic_data_consent_given_1">By checking this box, I consent to Reddit collecting, storing, and processing my responses to the demographic data surveys above.*</label>
+      </div>
+
+      <div class="field-wrapper" data-testid="ks-textarea">
+        <label id="cover-label" for="cover">Cover Letter</label>
+        <textarea id="cover" rows="3" placeholder="Optional cover letter"></textarea>
+      </div>
+
+      <div class="field-wrapper" data-testid="ks-select">
+        <label id="native-gender-label" for="native-gender">Gender (native select)</label>
+        <select id="native-gender">
+          <option value="">Select...</option>
+          <option>Male</option>
+          <option>Female</option>
+          <option>Non-binary</option>
+          <option>Decline to self-identify</option>
+        </select>
+      </div>
+
+      <div class="field-wrapper" data-testid="ks-radio">
+        <fieldset>
+          <legend>Do you require sponsorship? (radio)</legend>
+          <label><input type="radio" name="ks_sponsor" value="Yes"> Yes</label>
+          <label><input type="radio" name="ks_sponsor" value="No"> No</label>
+        </fieldset>
       </div>
 
       <button type="submit">Submit application</button>

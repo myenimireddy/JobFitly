@@ -659,6 +659,28 @@ PortalEngine.register('workday', {
         return;
       }
 
+      // Country / State / Device Type listbox buttons.
+      // Live WD mounts options in document-level responsiveMonikerPrompt — not inside formField.
+      const listBtn = field.querySelector('button[aria-haspopup="listbox"]');
+      if (listBtn) {
+        const shown = (listBtn.innerText || listBtn.textContent || listBtn.getAttribute('aria-label') || '')
+          .trim().replace(/\s+/g, ' ');
+        const empty = !shown || /^(please\s+)?(select|choose)\b/i.test(shown);
+        const openPrompt = doc.querySelector('[data-automation-id="responsiveMonikerPrompt"]:not([hidden])');
+        const optNodes = openPrompt
+          ? openPrompt.querySelectorAll('[data-automation-id="promptOption"], [role="option"], [data-automation-id="promptLeafNode"]')
+          : [];
+        pushField({
+          label, type: 'select', name: null, id: listBtn.id || null,
+          required: listBtn.getAttribute('aria-required') === 'true'
+            || !!field.querySelector('.required, [aria-required="true"]'),
+          options: Array.from(optNodes).map((o) => (o.innerText || o.textContent || '').trim()).filter(Boolean),
+          placeholder: empty ? shown || 'Select One' : null,
+          currentValue: empty ? null : shown,
+        });
+        return;
+      }
+
       const select = field.querySelector('select');
       if (select) {
         pushField({
@@ -732,8 +754,10 @@ PortalEngine.register('workday', {
         // Some sources are hierarchical — pick a leaf if another panel opened.
         const nested = [...(doc.querySelector('[data-automation-id="responsiveMonikerPrompt"]') || doc)
           .querySelectorAll('[data-automation-id="promptLeafNode"], [data-automation-id="promptOption"]')];
-        const nestedHit = nested.find((o) => optionMatch(answer, (o.innerText || '').trim())
-          || (/linkedin/i.test(answer) && /linkedin/i.test(o.innerText || '')));
+        const nestedHit = nested.find((o) => {
+          const t = (o.innerText || o.textContent || '').trim();
+          return optionMatch(answer, t) || (/linkedin/i.test(answer) && /linkedin/i.test(t));
+        });
         if (nestedHit && nestedHit !== best) {
           nestedHit.click();
           await sleep(200);
@@ -795,14 +819,26 @@ PortalEngine.register('workday', {
         }
         listBtn.click();
         await sleep(300);
-        // Listbox options often use promptOption in a popup — match within document but prefer visible.
-        const opts = [...doc.querySelectorAll('[data-automation-id="promptOption"], [role="option"], li')];
-        const hit = opts.find((o) => optionMatch(answer, (o.innerText || '').trim())
-          || (answer.length > 3 && norm(o.innerText).includes(norm(answer))));
+        // Prefer the open prompt panel (live WD); fall back to any promptOption in the doc.
+        const optionText = (o) => (o.innerText || o.textContent || '').trim();
+        const scope = doc.querySelector('[data-automation-id="responsiveMonikerPrompt"]:not([hidden])')
+          || doc.querySelector('[data-automation-id="responsiveMonikerPrompt"]')
+          || doc;
+        const opts = [...scope.querySelectorAll(
+          '[data-automation-id="promptOption"], [data-automation-id="promptLeafNode"], [role="option"]',
+        )];
+        const hit = opts.find((o) => {
+          const t = optionText(o);
+          return optionMatch(answer, t) || (answer.length > 3 && norm(t).includes(norm(answer)));
+        });
         if (hit) {
           hit.click();
-          filled++;
           await sleep(200);
+          // Only count filled if the trigger reflects the choice (React/fixture must commit).
+          const after = (listBtn.innerText || listBtn.textContent || '').trim();
+          if (optionMatch(answer, after) || (answer.length > 3 && norm(after).includes(norm(answer)))) {
+            filled++;
+          }
         }
         continue;
       }

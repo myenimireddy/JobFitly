@@ -11,5 +11,10 @@ Static application forms used by offline mock-runner and Side Panel UI e2e
 | `reddit-greenhouse.html` | Greenhouse Job Board (React-Select) — used by UI matrix |
 | `ashby.html` | Ashby |
 | `workday.html` | Workday |
+| `generic.html` | Generic fallback (any host) |
 
-Keep these in git. Prefer editing fixtures over hitting live ATS.
+Kitchen-sink controls use `data-testid="ks-*"` (textarea, select, radio, checkbox, file). Coverage sheet: [`docs/portal-field-coverage.md`](../../../docs/portal-field-coverage.md).
+
+These are **structural** stand-ins (hostname + widget patterns), not pixel clones of every employer board. Prefer fixing a failing control type here first; confirm stubborn live-only markup with a real apply URL afterward.
+
+Keep these in git. Prefer editing fixtures over hitting live ATS for day-to-day inject work.

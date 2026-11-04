@@ -38,10 +38,10 @@
       <input type="text" id="linkedin" placeholder="https://linkedin.com/in/...">
     </div>
 
-    <!-- Complex Fields - Should be skipped during injection -->
-    <div data-automation-id="formField-country">
+    <!-- Live WD: listbox button inside formField; options mount in a document-level prompt panel -->
+    <div data-automation-id="formField-country" data-testid="ks-custom-select">
       <label>Country <span class="required">*</span></label>
-      <button type="button" aria-haspopup="listbox">Select Country</button>
+      <button type="button" id="country-listbox-btn" aria-haspopup="listbox" aria-expanded="false" data-prompt-key="country">Select Country</button>
     </div>
 
     <div data-automation-id="formField-address">
@@ -49,18 +49,12 @@
       <input type="text" id="address" placeholder="Street address">
     </div>
 
-    <div data-automation-id="formField-state">
+    <div data-automation-id="formField-state" data-testid="ks-custom-select-state">
       <label>State/Province</label>
-      <button type="button" aria-haspopup="listbox">Select State</button>
+      <button type="button" id="state-listbox-btn" aria-haspopup="listbox" aria-expanded="false" data-prompt-key="state">Select State</button>
     </div>
 
-    <!-- Questions -->
-    <div data-automation-id="formField-workAuthorization">
-      <label>Do you have work authorization? <span class="required">*</span></label>
-      <input type="checkbox" id="workAuth"> Yes
-    </div>
-
-    <div data-automation-id="formField-sponsorship">
+    <div data-automation-id="formField-sponsorship" data-testid="ks-checkbox">
       <label>Do you require sponsorship? <span class="required">*</span></label>
       <input type="checkbox" id="sponsorship"> Yes
     </div>
@@ -68,6 +62,32 @@
     <div data-automation-id="formField-salary">
       <label>Salary Expectations</label>
       <input type="text" id="salary" placeholder="e.g., 150000">
+    </div>
+
+    <div data-automation-id="formField-additionalInfo" data-testid="ks-textarea">
+      <label>Additional Information</label>
+      <textarea id="additionalInfo" rows="3" placeholder="Optional notes"></textarea>
+    </div>
+
+    <div data-automation-id="formField-hearAbout" data-testid="ks-select">
+      <label>How did you hear about us?</label>
+      <select id="hearAbout">
+        <option value="">Select...</option>
+        <option>LinkedIn</option>
+        <option>Referral</option>
+        <option>Company Website</option>
+      </select>
+    </div>
+
+    <div data-automation-id="formField-workAuthRadio" data-testid="ks-radio">
+      <label>Are you legally authorized to work in the United States?</label>
+      <label><input type="radio" name="workAuthRadio" value="Yes"> Yes</label>
+      <label><input type="radio" name="workAuthRadio" value="No"> No</label>
+    </div>
+
+    <div data-automation-id="formField-resume" data-testid="ks-file">
+      <label>Resume</label>
+      <input type="file" id="resume" accept=".pdf,.doc,.docx" />
     </div>
 
     <!-- Work Experience rows reuse the same automation-id (live Workday). -->
@@ -88,8 +108,14 @@
       <input type="text" id="company1" value="">
     </div>
 
+    <button type="button" id="continue-btn" data-testid="ks-continue" disabled title="Multi-step Continue deferred — see coverage sheet">Continue</button>
     <button type="submit" id="submit-btn">Submit Application</button>
   </form>
+
+  <!-- Options live outside formField (same as live Workday responsiveMonikerPrompt). -->
+  <div id="wd-prompt" data-automation-id="responsiveMonikerPrompt" hidden
+       style="border:1px solid #ccc;margin:12px 0;padding:8px;background:#fff;max-width:400px;">
+  </div>
 
   <div id="test-results" style="margin-top: 30px; padding: 20px; background: #f3f4f6; border-radius: 8px;">
     <h3>Test Results</h3>
@@ -97,33 +123,70 @@
   </div>
 
   <script>
-    // Test harness
+    const PROMPT_OPTIONS = {
+      country: ['United States', 'Canada', 'United Kingdom', 'India'],
+      state: ['California', 'Texas', 'New York'],
+    };
+
+    (function wireWorkdayPrompts() {
+      const prompt = document.getElementById('wd-prompt');
+      let activeBtn = null;
+
+      function closePrompt() {
+        prompt.hidden = true;
+        prompt.innerHTML = '';
+        if (activeBtn) activeBtn.setAttribute('aria-expanded', 'false');
+        activeBtn = null;
+      }
+
+      function openPrompt(btn) {
+        const key = btn.getAttribute('data-prompt-key');
+        const opts = PROMPT_OPTIONS[key] || [];
+        activeBtn = btn;
+        btn.setAttribute('aria-expanded', 'true');
+        prompt.innerHTML = '';
+        opts.forEach((label) => {
+          const el = document.createElement('div');
+          el.setAttribute('data-automation-id', 'promptOption');
+          el.setAttribute('role', 'option');
+          el.textContent = label;
+          el.style.cssText = 'padding:6px 8px;cursor:pointer;';
+          el.addEventListener('click', () => {
+            btn.textContent = label;
+            closePrompt();
+          });
+          prompt.appendChild(el);
+        });
+        prompt.hidden = false;
+      }
+
+      document.querySelectorAll('button[aria-haspopup="listbox"][data-prompt-key]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          if (activeBtn === btn && !prompt.hidden) closePrompt();
+          else openPrompt(btn);
+        });
+      });
+    })();
+
     window.PortalTest = {
       results: [],
-      
       log(message, status = 'info') {
         this.results.push({ message, status, time: Date.now() });
         this.updateDisplay();
         console.log(`[PortalTest] ${message}`);
       },
-      
       updateDisplay() {
         const container = document.getElementById('results-content');
-        container.innerHTML = this.results.map(r => 
+        container.innerHTML = this.results.map(r =>
           `<div style="color: ${r.status === 'error' ? 'red' : r.status === 'success' ? 'green' : 'black'}; margin: 4px 0;">
             ${r.status === 'success' ? '✓' : r.status === 'error' ? '✗' : '•'} ${r.message}
           </div>`
         ).join('');
       },
-      
       async runTests() {
         this.log('Starting e2e tests...', 'info');
-        
-        // Test 1: Check field detection
         const fields = document.querySelectorAll('[data-automation-id^="formField-"]');
         this.log(`Found ${fields.length} form fields`, fields.length > 0 ? 'success' : 'error');
-        
-        // Manual poke helper only — do not auto-fill demo values (breaks UI e2e).
         document.getElementById('submit-btn').addEventListener('click', (e) => {
           e.preventDefault();
           this.log('Form submission captured', 'success');

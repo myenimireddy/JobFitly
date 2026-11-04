@@ -1,0 +1,9 @@
+{
+  "name": "jobfitly-fake-resumes",
+  "private": true,
+  "description": "PDFKit generator for fictional demo resumes (pdf-parse compatible)",
+  "type": "module",
+  "dependencies": {
+    "pdfkit": "^0.15.2"
+  }
+}

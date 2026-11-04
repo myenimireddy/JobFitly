@@ -384,8 +384,15 @@ export function Panel() {
       <SettingsPanel
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
-        onSaved={async () => {
+        onSaved={async (payload) => {
           setBackendOnline(await checkBackend());
+          // New API origin → old profileId may 404; clear panel like Clear.
+          if (payload?.apiOrigin) {
+            setProfile(null);
+            setShowCapture(false);
+            await clearProfileId();
+            await syncProfileIdToPage(null);
+          }
           await refreshSummaries();
         }}
       />

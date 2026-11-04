@@ -108,6 +108,10 @@ info "Building Chrome extension"
 (cd extension && npm run build)
 ok "Built → extension/dist/"
 
+info "Generating fictional sample resume PDFs (gitignored)"
+npm run generate:fake-resumes
+ok "Sample PDFs → docs/samples/resumes/"
+
 cat <<EOF
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

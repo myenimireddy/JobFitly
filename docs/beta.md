@@ -25,11 +25,21 @@ What JobFitly **does** for beta, and what it deliberately does **not**.
 
 ## Tester checklist
 
-1. `./scripts/bootstrap.sh` then `./scripts/start.sh`
-2. Load `extension/dist` unpacked; Settings → Groq key (or Ollama)
-3. Upload a **fictional** sample from [`samples/resumes/`](samples/resumes/)
-4. Smoke Greenhouse / Lever / Workday / Ashby — never Submit
-5. Confirm Clear vs Delete behavior
+1. `./scripts/bootstrap.sh` (installs deps, builds extension, generates sample PDFs) then `./scripts/start.sh`
+2. Load `extension/dist` unpacked · Settings → Groq key (or Ollama) · backend `http://localhost:3000`
+3. Upload a **fictional** sample from [`docs/samples/resumes/`](samples/resumes/) (if missing: `npm run generate:fake-resumes`)
+4. Smoke Greenhouse / Lever / Workday / Ashby — **never Submit**
+5. Confirm Clear (hide in panel) vs Delete (DB row gone)
+6. Optional offline gate: `cd extension && npm test` · field sheet: [`portal-field-coverage.md`](portal-field-coverage.md)
+
+## Maintainer release checklist
+
+1. `make test-fast` · optionally `cd extension && npm run test:offline`
+2. Manual smoke (checklist above) with Groq preferred
+3. Open/update PR → merge to `main` (delete remote branch on merge)
+4. Tag beta when smoke is boring: e.g. `v0.1.0-beta` (optional)
+5. CI: ensure repo secret **`GROQ_API_KEY`** for manual UI e2e workflow
+6. Do **not** ship Chrome Web Store yet — unpacked `extension/dist` only
 
 ## CI note (maintainers)
 

@@ -56,7 +56,7 @@
     <div class="application-additional">
       <h3>Additional Questions</h3>
       
-      <div class="application-question">
+      <div class="application-question" data-testid="ks-select">
         <div class="application-label">How did you hear about us? <span>*</span></div>
         <div class="application-field">
           <select name="source">
@@ -69,7 +69,7 @@
         </div>
       </div>
 
-      <div class="application-question">
+      <div class="application-question" data-testid="ks-radio">
         <div class="application-label">Are you authorized to work in the US? <span>*</span></div>
         <div class="application-field">
           <label><input type="radio" name="workAuth" value="yes"> Yes</label><br>
@@ -77,10 +77,24 @@
         </div>
       </div>
 
-      <div class="application-question">
+      <div class="application-question" data-testid="ks-textarea">
         <div class="application-label">Cover Letter</div>
         <div class="application-field">
           <textarea name="coverLetter" rows="4" placeholder="Optional..."></textarea>
+        </div>
+      </div>
+
+      <div class="application-question" data-testid="ks-checkbox">
+        <div class="application-label">Consent</div>
+        <div class="application-field">
+          <label><input type="checkbox" name="consent" value="1"> I agree to the privacy policy</label>
+        </div>
+      </div>
+
+      <div class="application-question" data-testid="ks-file">
+        <div class="application-label">Resume/CV</div>
+        <div class="application-field">
+          <input type="file" name="resume" accept=".pdf,.doc,.docx" />
         </div>
       </div>
     </div>
