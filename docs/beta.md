@@ -34,4 +34,4 @@ What JobFitly **does** for beta, and what it deliberately does **not**.
 | [#28](https://github.com/myenimireddy/JobFitly/issues/28) Profile Clear vs Delete + multi-resume | **Done** — Clear / Delete / Load latest / switcher |
 | [#26](https://github.com/myenimireddy/JobFitly/issues/26) Cold-start pack (docs, tag, walkthrough) | **Done** — `docs/beta.md`, tag [`v0.1.0-beta`](https://github.com/myenimireddy/JobFitly/releases/tag/v0.1.0-beta), [tutorials](tutorials/) |
 | [#25](https://github.com/myenimireddy/JobFitly/issues/25) CI `GROQ_API_KEY` + green manual UI e2e | Open — ops: add secret, run Actions once green |
-| [#24](https://github.com/myenimireddy/JobFitly/issues/24) Manual portal smoke sign-off | Open — human Pass/Fail matrix still needed |
+| [#24](https://github.com/myenimireddy/JobFitly/issues/24) Manual portal smoke sign-off | **Done** — Greenhouse / Lever / Workday / Ashby human smoke passed |
