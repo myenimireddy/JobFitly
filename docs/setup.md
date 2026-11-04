@@ -67,6 +67,7 @@ Keep that terminal open. Reload the extension on `chrome://extensions` after pul
 |---------|-----|
 | Backend offline | `./scripts/start.sh` · check Settings → Backend URL |
 | Analyze / LLM offline | Groq key **or** install Ollama from [ollama.com/download](https://ollama.com/download) (do **not** `brew install ollama` — that can compile for hours) |
+| `model … has been decommissioned` | `git pull` · set `GROQ_MODEL=openai/gpt-oss-20b` in `backend/.env` · restart `./scripts/start.sh` (or re-run bootstrap) |
 | Homebrew compiling LLVM/Rust for Ollama | Cancel with Ctrl+C · skip Ollama in bootstrap · use Groq, **or** install the Mac app from [ollama.com/download/mac](https://ollama.com/download/mac) |
 | Stale UI | `cd extension && npm run build` → Reload extension |
 | Wrong person’s resume | Clear, then upload or pick from switcher — panel no longer auto-loads `/latest` |

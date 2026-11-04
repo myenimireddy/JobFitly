@@ -109,6 +109,11 @@ if [[ ! -f backend/.env ]]; then
   ok "Created backend/.env"
 else
   ok "backend/.env already exists"
+  # Migrate retired Groq model ids left from older clones
+  if grep -Eq '^GROQ_MODEL=(llama3-70b-8192|llama3-8b-8192|llama-3\.3-70b-versatile|llama-3\.1-8b-instant)$' backend/.env 2>/dev/null; then
+    sed -i.bak 's/^GROQ_MODEL=.*/GROQ_MODEL=openai\/gpt-oss-20b/' backend/.env && rm -f backend/.env.bak
+    ok "Updated GROQ_MODEL → openai/gpt-oss-20b (previous id was decommissioned)"
+  fi
 fi
 (cd backend && npx prisma db push --accept-data-loss)
 
