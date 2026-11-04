@@ -28,7 +28,8 @@ const config = {
   ollamaModel: process.env.OLLAMA_MODEL || 'llama3.2',
   ollamaBaseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
   groqApiKey: process.env.GROQ_API_KEY,
-  groqModel: process.env.GROQ_MODEL || 'llama3-70b-8192',
+  // Free/developer tier: llama3-70b / llama-3.3-70b retired — use gpt-oss.
+  groqModel: process.env.GROQ_MODEL || 'openai/gpt-oss-20b',
 };
 
 module.exports = config;

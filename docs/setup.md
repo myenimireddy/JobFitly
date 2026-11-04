@@ -23,11 +23,13 @@ Prefer **skipping Ollama** in the prompt if you will paste a Groq key.
 
 1. `chrome://extensions` → enable **Developer mode**
 2. **Load unpacked** → `JobFitly/extension/dist` (created by the build step above)
-3. Open the Side Panel → **Settings (gear)** → paste a key from [console.groq.com/keys](https://console.groq.com/keys)
+3. Open the Side Panel → **Settings (gear)** → paste a key from [console.groq.com/keys](https://console.groq.com/keys) → **Save key**  
+   Confirm the status line shows **Groq — fast (cloud)** (not Ollama) before uploading.
 4. (Optional) Settings → **Backend URL** if your API is not on `http://localhost:3000`  
    (Changing URL clears the loaded profile — re-upload or pick from the switcher on the new backend.)
 5. Upload a resume PDF from [`docs/samples/resumes/`](samples/resumes/)  
-   (`bootstrap.sh` generates them; if missing: `npm run generate:fake-resumes`)
+   (`bootstrap.sh` generates them; if missing: `npm run generate:fake-resumes`)  
+   Backend log should say `[llmParser] Using groq` (not ollama).
 
 Known gaps: **[beta.md](beta.md)**. Full design/dev/test/release flow: **[process.md](process.md)**.
 

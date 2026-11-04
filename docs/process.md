@@ -68,11 +68,12 @@ Run **left to right**. Do not skip offline for portal DOM changes.
 
 ### Beta smoke (manual)
 
-1. `./scripts/bootstrap.sh` then `./scripts/start.sh` (or regenerate PDFs: `npm run generate:fake-resumes`)
-2. Load `extension/dist` · Settings → Groq (preferred) · backend `http://localhost:3000`
-3. Upload a fictional PDF from [`samples/resumes/`](samples/resumes/)
+1. `git pull` · `cd backend && npm install` · `./scripts/start.sh` (first time: `./scripts/bootstrap.sh`, answer **N** to Ollama)
+2. Load/reload `extension/dist` · Settings → Save Groq key → confirm **Groq — fast (cloud)**
+3. Upload a fictional PDF from [`samples/resumes/`](samples/resumes/) — terminal should log `Using groq for resume parse`
 4. Analyze + Fill Form on Greenhouse / Lever / Ashby / Workday — **never Submit**
 5. Confirm Clear vs Delete
+6. Optional: Settings → **Use Ollama** then upload again — should log `Using ollama` (slow path)
 
 Known product gaps: [beta.md](beta.md). Field-type matrix: [portal-field-coverage.md](portal-field-coverage.md).
 

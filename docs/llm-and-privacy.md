@@ -16,7 +16,7 @@ From `backend/src/lib/llmSettings.js`:
 |------|----------|
 | **Ollama** | Everything local |
 | **Groq — Analyze / Ask AI / doc gen** | Contact PII replaced with placeholders (`piiSanitizer`), restored locally after |
-| **Resume upload parse** | Prefers reachable **Ollama** even if Groq is on; Groq fallback scrubs emails/phones first |
+| **Resume upload parse** | Same as Settings: **Groq** when a key is saved (emails/phones scrubbed); **Ollama** when Use Ollama / no key |
 
 Skills, titles, companies, and schools may still appear in sanitized match prompts (needed for scoring).
 

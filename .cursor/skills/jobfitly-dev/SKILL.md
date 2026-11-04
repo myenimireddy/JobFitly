@@ -25,7 +25,7 @@ Tester setup: [`docs/setup.md`](../../../docs/setup.md) (`scripts/bootstrap.sh`,
 | Extension | `extension/` | Side Panel HITL + scrape/inject on ATS pages |
 | LLM | Groq if key, else Ollama | Resolved by `lib/llmSettings.js` (not env alone) |
 
-**Privacy goal:** Profiles stay on the user’s machine (local SQLite). JobFitly does not host cloud copies. Cloud (Groq) prompts for Analyze / Ask AI / docs go through `piiSanitizer` (placeholders → restore). Resume parse **prefers reachable Ollama** even when Groq is configured; Groq fallback scrubs emails/phones first.
+**Privacy goal:** Profiles stay on the user’s machine (local SQLite). JobFitly does not host cloud copies. Cloud (Groq) prompts for Analyze / Ask AI / docs / resume parse go through sanitizer or contact scrub; Settings **Use Ollama** (`forceOllama`) keeps parse/analyze local.
 
 ## LLM resolution
 

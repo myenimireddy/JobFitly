@@ -12,7 +12,7 @@ class GroqLLM extends BaseLLM {
   constructor(opts = {}) {
     super();
     this.apiKey = opts.apiKey || config.groqApiKey;
-    this.model = opts.model || config.groqModel || 'llama3-70b-8192';
+    this.model = opts.model || config.groqModel || 'openai/gpt-oss-20b';
     this.client = this.apiKey ? new Groq({ apiKey: this.apiKey }) : null;
   }
 

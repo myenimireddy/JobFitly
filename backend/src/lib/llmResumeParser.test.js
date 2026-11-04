@@ -1,6 +1,17 @@
 'use strict';
 
-const { normalizeParsedResume, computeConfidence, isCompleteParse } = require('./llmResumeParser');
+jest.mock('../llm/factory', () => ({
+  create: jest.fn(() => ({ extract: jest.fn() })),
+}));
+
+const LLMFactory = require('../llm/factory');
+const {
+  normalizeParsedResume,
+  computeConfidence,
+  isCompleteParse,
+  createParseLlm,
+} = require('./llmResumeParser');
+const { setGroqApiKey } = require('./llmSettings');
 
 describe('normalizeParsedResume', () => {
   test('moves educationalQualifications into education[]', () => {
@@ -68,5 +79,16 @@ describe('isCompleteParse', () => {
         { title: 'Engineer', company: 'Acme Corp', achievements: ['Shipped X'] },
       ],
     })).toBe(true);
+  });
+});
+
+describe('createParseLlm', () => {
+  test('uses Groq (cloud) when a Groq key is saved — does not prefer Ollama', () => {
+    const key = `gsk_${'y'.repeat(30)}`;
+    setGroqApiKey(key);
+    const { cloud } = createParseLlm();
+    expect(cloud).toBe(true);
+    expect(LLMFactory.create).toHaveBeenCalled();
+    setGroqApiKey(null);
   });
 });

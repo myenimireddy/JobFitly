@@ -211,7 +211,7 @@ export function SettingsPanel({ open, onClose, onSaved }) {
             >
               console.groq.com/keys
             </a>
-            . Without it, Analyze / Ask AI use local Ollama (~30–60s).
+            . Applies to resume parse, Analyze, and Ask AI. Without it, those use local Ollama (~30–60s).
           </p>
           <div className="flex gap-1.5">
             <input
@@ -251,9 +251,8 @@ export function SettingsPanel({ open, onClose, onSaved }) {
           </div>
           <p className="text-[10px] text-slate-600 leading-snug">
             JobFitly does <span className="text-slate-400">not</span> upload your profile to our servers.
-            Data stays in your local backend. With Groq: contact PII (name, email, phone, …) is
-            replaced with placeholders before Analyze / Ask AI. Resume parse prefers local Ollama
-            when available. Ollama keeps prompts on this machine entirely.
+            Data stays in your local backend. With Groq: contact PII is scrubbed/placeholdered before
+            cloud prompts (including resume parse). Use Ollama keeps Analyze / parse on this machine.
           </p>
         </section>
 

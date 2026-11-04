@@ -10,38 +10,20 @@
  */
 
 const LLMFactory = require('../llm/factory');
-const OllamaLLM = require('../llm/ollama');
 const { resolveLlmRuntime } = require('./llmSettings');
 const { scrubContactStrings } = require('./piiSanitizer');
 
 const PARSE_TIMEOUT_MS = 10 * 60 * 1000;
 
 /**
- * Prefer local Ollama for resume parse only when it is actually reachable.
- * isConfigured() alone is not enough (base URL always set) — probe the host.
- * Fall back to Groq with contacts scrubbed when Ollama is down.
+ * Same provider as Analyze / Ask AI (Settings + resolveLlmRuntime).
+ * Cloud parse scrubs emails/phones before the prompt.
  */
-async function createParseLlm() {
+function createParseLlm() {
   const runtime = resolveLlmRuntime();
-  if (runtime.provider === 'groq') {
-    const base = runtime.ollamaBaseUrl || 'http://localhost:11434';
-    try {
-      const controller = new AbortController();
-      const t = setTimeout(() => controller.abort(), 1500);
-      const res = await fetch(base, { signal: controller.signal });
-      clearTimeout(t);
-      if (res.ok || res.status === 200) {
-        const ollama = new OllamaLLM();
-        console.log('[llmParser] Using local Ollama for resume parse (privacy)');
-        return { llm: ollama, cloud: false };
-      }
-    } catch {
-      /* Ollama not running */
-    }
-    console.warn('[llmParser] Ollama unavailable — resume parse will use Groq with contacts scrubbed');
-    return { llm: LLMFactory.create(), cloud: true };
-  }
-  return { llm: LLMFactory.create(), cloud: false };
+  const cloud = runtime.provider === 'groq';
+  console.log(`[llmParser] Using ${runtime.provider} for resume parse${cloud ? ' (contacts scrubbed)' : ''}`);
+  return { llm: LLMFactory.create(), cloud };
 }
 
 const SYSTEM_PROMPT = `You are an expert resume parser. Extract structured information from the raw resume text provided.
@@ -184,7 +166,7 @@ async function parseResumeWithLLM(rawText) {
   let llm;
   let cloud = false;
   try {
-    ({ llm, cloud } = await createParseLlm());
+    ({ llm, cloud } = createParseLlm());
   } catch (err) {
     console.warn(`[llmParser] LLM not available: ${err.message}`);
     return null;
@@ -317,4 +299,10 @@ function computeConfidence(parsed) {
   return { score, note };
 }
 
-module.exports = { parseResumeWithLLM, computeConfidence, normalizeParsedResume, isCompleteParse };
+module.exports = {
+  parseResumeWithLLM,
+  computeConfidence,
+  normalizeParsedResume,
+  isCompleteParse,
+  createParseLlm,
+};
