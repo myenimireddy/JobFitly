@@ -27,12 +27,23 @@ Works with Greenhouse, Lever, Workday, Ashby, plus a generic HTML fallback — d
 
 Watch in order after [setup](docs/setup.md) (bootstrap + load unpacked extension). Full page: **[docs/tutorials/](docs/tutorials/)**.
 
-| Step | Video |
-|------|--------|
-| 1. Configure Groq | [YouTube](https://youtu.be/7iTxzJjfT50) |
-| 2. Add a profile | [YouTube](https://youtu.be/h0eY4h-l2Ls) |
-| 3. Analyze a job | [YouTube](https://youtu.be/vcPUH-qn8-U) |
-| 4. HITL form fill | [YouTube](https://youtu.be/lTqOIXQa-9E) |
+GitHub can’t play YouTube inline — click a thumbnail to open the video.
+
+### 1. Configure Groq
+
+[![Configure Groq](https://img.youtube.com/vi/7iTxzJjfT50/hqdefault.jpg)](https://youtu.be/7iTxzJjfT50)
+
+### 2. Add a profile
+
+[![Add a profile](https://img.youtube.com/vi/h0eY4h-l2Ls/hqdefault.jpg)](https://youtu.be/h0eY4h-l2Ls)
+
+### 3. Analyze a job
+
+[![Analyze a job](https://img.youtube.com/vi/vcPUH-qn8-U/hqdefault.jpg)](https://youtu.be/vcPUH-qn8-U)
+
+### 4. HITL form fill
+
+[![HITL form fill](https://img.youtube.com/vi/lTqOIXQa-9E/hqdefault.jpg)](https://youtu.be/lTqOIXQa-9E)
 
 ---
 
