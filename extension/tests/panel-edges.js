@@ -14,6 +14,7 @@ import {
   emptyJobFitView,
 } from '../src/lib/jobFitSession.js';
 import { nextShowCapture } from '../src/lib/captureSession.js';
+import { profileSummaryLabel } from '../src/lib/profileSummary.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => readFileSync(join(root, rel), 'utf8');
@@ -163,6 +164,14 @@ test('application details stays as the user left it when the job tab changes', (
   assert.equal(nextShowCapture('resume-uploaded', { captureComplete: true }), true);
 });
 
+test('saved profile labels disambiguate duplicate names', () => {
+  const first = profileSummaryLabel({ id: 'cm123456789', name: 'Alex Chen', captureComplete: true });
+  const second = profileSummaryLabel({ id: 'cm987654321', name: 'Alex Chen', captureComplete: false });
+  assert.equal(first, 'Alex Chen · cm123456 · ready');
+  assert.equal(second, 'Alex Chen · cm987654 · details needed');
+  assert.notEqual(first, second);
+});
+
 test('panel source keeps those rules wired', () => {
   const panel = read('src/sidepanel/Panel.jsx');
   const match = read('src/popup/MatchSection.jsx');
@@ -178,6 +187,7 @@ test('panel source keeps those rules wired', () => {
   assert.equal(profileUi.includes('Switch profile'), true);
   assert.equal(profileUi.includes('data-testid="profile-selector"'), true);
   assert.equal(panel.includes('onSelectProfile={handleSelectProfile}'), true);
+  assert.equal(panel.includes('applyProfile(data, { syncPage: false })'), true);
   assert.equal(captureUi.includes("title: 'Preferences'"), false);
   assert.equal(captureUi.includes('How did you hear'), false);
 });

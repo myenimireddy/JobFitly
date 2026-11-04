@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
+import { profileSummaryLabel } from '../lib/profileSummary';
 
 /**
  * Profile upload / summary for the side panel.
  * Clear = local UI only. Delete = permanent backend + local clear (confirm first).
- * One profile for this user. Empty panel can load the newest resume on this machine.
+ * Empty panel can load the newest resume or explicitly select a saved profile.
  */
 export function ProfileSection({
   profile,
@@ -35,7 +36,7 @@ export function ProfileSection({
         {!profile ? <option value="">Choose a saved profile…</option> : null}
         {profileSummaries.map((summary) => (
           <option key={summary.id} value={summary.id}>
-            {summary.name}{summary.captureComplete ? ' · ready' : ' · details needed'}
+            {profileSummaryLabel(summary)}
           </option>
         ))}
       </select>
