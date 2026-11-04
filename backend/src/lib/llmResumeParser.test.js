@@ -1,9 +1,5 @@
 'use strict';
 
-jest.mock('ollama', () => ({
-  Ollama: jest.fn().mockImplementation(() => ({ chat: jest.fn() })),
-}));
-
 const { normalizeParsedResume, computeConfidence, isCompleteParse } = require('./llmResumeParser');
 
 describe('normalizeParsedResume', () => {

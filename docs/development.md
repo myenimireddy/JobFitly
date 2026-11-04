@@ -6,8 +6,9 @@ Lifecycle (design → test → release): **[process.md](process.md)**. This page
 
 ```bash
 make install && make setup
-brew install ollama && ollama pull llama3.2   # or use Groq in Settings
-make ollama          # terminal 1
+# Ollama: prefer https://ollama.com/download (not `brew install ollama`)
+ollama pull llama3.2   # or use Groq in Settings
+make ollama            # terminal 1
 make dev-backend     # terminal 2 — :3000
 make build-extension # then Load unpacked → extension/dist
 # optional

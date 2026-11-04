@@ -1,31 +1,53 @@
-const { Ollama } = require('ollama');
 const BaseLLM = require('./base');
 const config = require('../config');
 
 /**
- * Ollama LLM provider for local model inference
+ * Ollama via local HTTP API (no `ollama` npm package — that package is ESM-only
+ * and breaks CommonJS `require` on recent versions).
+ * Docs: POST {baseUrl}/api/chat
  */
 class OllamaLLM extends BaseLLM {
   constructor() {
     super();
     this.model = config.ollamaModel || 'llama3';
-    this.baseUrl = config.ollamaBaseUrl || 'http://localhost:11434';
-    this.client = new Ollama({ host: this.baseUrl });
+    this.baseUrl = (config.ollamaBaseUrl || 'http://localhost:11434').replace(/\/$/, '');
   }
 
-  /**
-   * Check if Ollama is configured
-   * @returns {boolean}
-   */
   isConfigured() {
     return !!this.baseUrl;
   }
 
+  async chat(body, timeoutMs) {
+    const TIMEOUT_MS = timeoutMs || 10 * 60 * 1000;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+    try {
+      const res = await fetch(`${this.baseUrl}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stream: false, ...body }),
+        signal: ctrl.signal,
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`HTTP ${res.status}${text ? `: ${text.slice(0, 200)}` : ''}`);
+      }
+      return res.json();
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        throw Object.assign(new Error('timeout'), { name: 'AbortError' });
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   /**
-   * Extract using local Ollama model
-   * @param {string} systemPrompt - System instructions
-   * @param {string} userPrompt - User content
-   * @returns {Promise<string>} LLM response
+   * @param {string} systemPrompt
+   * @param {string} userPrompt
+   * @param {number} [timeoutMs]
+   * @returns {Promise<string>}
    */
   async extract(systemPrompt, userPrompt, timeoutMs) {
     console.log('\n━━━ [ollama] REQUEST ━━━');
@@ -37,40 +59,31 @@ class OllamaLLM extends BaseLLM {
     const t0 = Date.now();
 
     const TIMEOUT_MS = timeoutMs || 10 * 60 * 1000;
-    let timer;
     try {
-      const response = await Promise.race([
-        this.client.chat({
-          model: this.model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          format: 'json',
-          keep_alive: '30m',
-          options: {
-            temperature: 0,
-            num_ctx: 8192,
-          },
-        }),
-        new Promise((_, reject) => {
-          timer = setTimeout(() => reject(Object.assign(new Error('timeout'), { name: 'AbortError' })), TIMEOUT_MS);
-        }),
-      ]);
-      clearTimeout(timer);
+      const response = await this.chat({
+        model: this.model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        format: 'json',
+        keep_alive: '30m',
+        options: {
+          temperature: 0,
+          num_ctx: 8192,
+        },
+      }, TIMEOUT_MS);
 
-      const raw = response.message.content;
+      const raw = response?.message?.content || '';
       console.log(`\n━━━ [ollama] RESPONSE (${Date.now() - t0}ms) ━━━`);
       console.log(`  length : ${raw.length} chars`);
       console.log('  output:');
       console.log(' ', raw.slice(0, 600).replace(/\n/g, '\n  '));
 
-      // Try to parse as JSON to flag any structural issues early
       try {
         const parsed = JSON.parse(raw.trim());
         console.log('  ✅ valid JSON → top-level keys:', Object.keys(parsed));
       } catch {
-        // might be wrapped in markdown code block
         const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]+?)```/);
         if (jsonMatch) {
           try {
@@ -87,7 +100,6 @@ class OllamaLLM extends BaseLLM {
 
       return raw;
     } catch (error) {
-      if (timer) clearTimeout(timer);
       const msg = error.name === 'AbortError'
         ? `Ollama timed out after ${TIMEOUT_MS / 1000}s — model may still be loading, try again`
         : `Ollama LLM failed: ${error.message}`;
@@ -96,18 +108,15 @@ class OllamaLLM extends BaseLLM {
     }
   }
 
-  /**
-   * Load the model into RAM so the first real parse is not a cold start.
-   */
   async warmup() {
     try {
-      await this.client.chat({
+      await this.chat({
         model: this.model,
         messages: [{ role: 'user', content: '{"ok":true}' }],
         format: 'json',
         keep_alive: '30m',
         options: { temperature: 0, num_predict: 8, num_ctx: 512 },
-      });
+      }, 60_000);
       console.log(`[ollama] ${this.model} loaded into memory`);
     } catch (err) {
       console.warn(`[ollama] warmup skipped: ${err.message}`);
